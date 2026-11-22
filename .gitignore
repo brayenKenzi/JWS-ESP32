@@ -1,0 +1,26 @@
+# Toolchain, SDK, dan binary installer berukuran besar (tidak di-push ke GitHub)
+.tools/
+XIAOZHI/
+TOOLS/
+FIRMWARE.rar
+
+# Build artifacts & environment Python/PlatformIO
+.pio/
+**/.pio/
+.venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+test/.build/
+.vscode/
+*.vcd
+
+# File rahasia lokal & generated header
+secrets.h
+**/secrets.h
+jws-esp32-wokwi/include/DashboardAssets.h
+jws-esp32-wokwi/web/.preview-state.json
+
+# Embedded reference clones
+reference/Arduino-Prayer-Times/
+reference/JWSMurottal/

@@ -1,0 +1,57 @@
+{
+  "platform": "espressif32@6.10.0",
+  "date": "2026-11-03",
+  "native_compiler": "ziglang@0.13.0",
+  "wokwi_cli": "0.29.1",
+  "firmware_builds": {
+    "sim": "success",
+    "sim_mock": "success"
+  },
+  "platformio": "6.1.18",
+  "artifacts": [
+    {
+      "sha256": "62a5ae4d108c07d8dec5ca389f2011f3ef77ced5832b9b33ae5d13889ff61a8a",
+      "path": ".pio/build/sim/firmware.bin",
+      "bytes": 799808
+    },
+    {
+      "sha256": "1ab75422fcc1f594b8ed3d483b95b73b6785c0893de56c0b2933f2c4382019fa",
+      "path": ".pio/build/sim/firmware.elf",
+      "bytes": 11957212
+    },
+    {
+      "sha256": "ef7c728c72683fdf34551c90efbc024f67c3f5494b3b663f1a7c27b80a5e7190",
+      "path": ".pio/build/sim_mock/firmware.bin",
+      "bytes": 318736
+    },
+    {
+      "sha256": "32c9edd9d29b10db35a60c658a3fcb394572d00268566aa8461e48bb9bf21185",
+      "path": ".pio/build/sim_mock/firmware.elf",
+      "bytes": 7492300
+    }
+  ],
+  "simulator": {
+    "attempt_exit_code": 1,
+    "blocker": "WOKWI_CLI_TOKEN unavailable",
+    "executed": false
+  },
+  "hardware_tested": false,
+  "diagram_lint": {
+    "errors": 0,
+    "info": 1,
+    "exit_code": 0
+  },
+  "native_tests": {
+    "passed": 26,
+    "failed": 0
+  },
+  "recovery": {
+    "reason": "Firmware artifacts were missing; cause not established",
+    "date": "2026-11-03",
+    "log": "evidence/build-recovery.log",
+    "builds": {
+      "sim": "success",
+      "sim_mock": "success"
+    }
+  }
+}

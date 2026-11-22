@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "author": "JWS ESP32 ILI9341 simulation; reference: busel7/JWSMurottal",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-esp32-devkit-v1",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-ili9341",
+      "id": "tft",
+      "top": 0,
+      "left": 230,
+      "rotate": 90,
+      "attrs": {}
+    }
+  ],
+  "connections": [
+    [
+      "esp:TX0",
+      "$serialMonitor:RX",
+      "",
+      []
+    ],
+    [
+      "esp:RX0",
+      "$serialMonitor:TX",
+      "",
+      []
+    ],
+    [
+      "esp:VIN",
+      "tft:VCC",
+      "red",
+      []
+    ],
+    [
+      "esp:GND.1",
+      "tft:GND",
+      "black",
+      []
+    ],
+    [
+      "esp:D18",
+      "tft:SCK",
+      "orange",
+      []
+    ],
+    [
+      "esp:D23",
+      "tft:MOSI",
+      "green",
+      []
+    ],
+    [
+      "esp:D19",
+      "tft:MISO",
+      "purple",
+      []
+    ],
+    [
+      "esp:D27",
+      "tft:CS",
+      "blue",
+      []
+    ],
+    [
+      "esp:D26",
+      "tft:D/C",
+      "yellow",
+      []
+    ]
+  ],
+  "serialMonitor": {
+    "display": "always",
+    "newline": "lf",
+    "convertEol": true
+  }
+}

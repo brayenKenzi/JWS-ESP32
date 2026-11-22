@@ -1,0 +1,9 @@
+[wokwi]
+version = 1
+firmware = '.pio/build/sim_mock/firmware.bin'
+elf = '.pio/build/sim_mock/firmware.elf'
+
+
+[[net.forward]]
+from = 'localhost:8180'
+to = 'target:80'

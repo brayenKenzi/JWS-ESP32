@@ -1,0 +1,129 @@
+{
+  "skill": "kenzi-esp32-lab",
+  "target": {
+    "board": "esp32doit-devkit-v1",
+    "chipTarget": "esp32",
+    "variant": "doitESP32devkitV1",
+    "cpuHz": 240000000,
+    "flash": "4MB",
+    "flashMode": "dio",
+    "flashHz": 40000000,
+    "psram": "not configured; physical module not inspected",
+    "platform": "espressif32@6.10.0",
+    "frameworkPackage": "3.20017.241212+sha.dcc1105b",
+    "espIdf": "4.4.7"
+  },
+  "checks": [
+    {
+      "name": "board",
+      "passed": true,
+      "detail": "esp32doit-devkit-v1"
+    },
+    {
+      "name": "framework",
+      "passed": true,
+      "detail": "arduino"
+    },
+    {
+      "name": "SPI firmware",
+      "passed": true,
+      "detail": "SCK18 / MISO19 / MOSI23 / CS27"
+    },
+    {
+      "name": "display constructor",
+      "passed": true,
+      "detail": "DC26 / CS27 / no reset pin"
+    },
+    {
+      "name": "wire SCK",
+      "passed": true,
+      "detail": "GPIO18 to TFT SCK"
+    },
+    {
+      "name": "wire MOSI",
+      "passed": true,
+      "detail": "GPIO23 to TFT MOSI"
+    },
+    {
+      "name": "wire MISO",
+      "passed": true,
+      "detail": "GPIO19 to TFT MISO"
+    },
+    {
+      "name": "wire CS",
+      "passed": true,
+      "detail": "GPIO27 to TFT CS"
+    },
+    {
+      "name": "wire D/C",
+      "passed": true,
+      "detail": "GPIO26 to TFT D/C"
+    },
+    {
+      "name": "TFT power",
+      "passed": true,
+      "detail": "Virtual TFT VCC=VIN, common ground; physical module supply is not validated"
+    },
+    {
+      "name": "strapping/output pins",
+      "passed": true,
+      "detail": "TFT outputs avoid ESP32 boot strapping and input-only pins"
+    },
+    {
+      "name": "wokwi.toml path",
+      "passed": true,
+      "detail": "sim"
+    },
+    {
+      "name": "wokwi.toml HTTP forward",
+      "passed": true,
+      "detail": "localhost:8180 -> ESP32 virtual HTTP80"
+    },
+    {
+      "name": "wokwi.mock.toml path",
+      "passed": true,
+      "detail": "sim_mock"
+    },
+    {
+      "name": "wokwi.mock.toml HTTP forward",
+      "passed": true,
+      "detail": "localhost:8180 -> ESP32 virtual HTTP80"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": ".pio\\build\\sim\\firmware.bin",
+      "exists": true,
+      "bytes": 1054704,
+      "olderThanSource": false,
+      "sha256": "f4262ab6785ae0e288a227bc5057c19d2fb0235697b857b53eb391624ed6ba6e"
+    },
+    {
+      "path": ".pio\\build\\sim\\firmware.elf",
+      "exists": true,
+      "bytes": 15776488,
+      "olderThanSource": false,
+      "sha256": "7eff9317c95b5a11f0ad54b07f509756f76ffdbf4281d1da6e524f494370b06b"
+    },
+    {
+      "path": ".pio\\build\\sim_mock\\firmware.bin",
+      "exists": true,
+      "bytes": 1050800,
+      "olderThanSource": false,
+      "sha256": "a591cb38ea5b3232aa6b361705a3d0afa5717019653b673553f81ca59519ebab"
+    },
+    {
+      "path": ".pio\\build\\sim_mock\\firmware.elf",
+      "exists": true,
+      "bytes": 15728420,
+      "olderThanSource": false,
+      "sha256": "1bd5779985a529c378adefecfb9e1f6f7ddec0b5122aa0360fb3daab39ddd6ab"
+    }
+  ],
+  "hardwareFlashed": false,
+  "hardwareValidated": false,
+  "limits": [
+    "Static checks and firmware build do not prove simulator execution.",
+    "P5/P10, DFPlayer, RTC hardware, radio, audio timing and physical power are not validated."
+  ]
+}

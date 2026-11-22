@@ -1,0 +1,28 @@
+Compiling native C++ core tests...
+PASS Makassar
+PASS Jakarta
+PASS Jayapura
+PASS Makkah
+PASS Makassar leap
+PASS Imsak = corrected Subuh minus 10 minutes
+PASS UTC offset shifts every event by exactly 60 minutes
+PASS Ihtiyat affects prayers and imsak, leaves Syuruq unchanged
+PASS Hanafi Ashar is later than standard
+PASS Calendar validation and supported year boundaries
+PASS Invalid date produces invalid schedule
+PASS Polar day explicitly unavailable; no invented high-latitude times
+PASS Reject NaN latitude
+PASS Reject invalid timezone
+PASS Zero latitude/longitude/timezone remain valid configuration
+PASS Zero-minute imsak accepted
+PASS Invalid minute formatted explicitly
+PASS Last minute formatted safely
+PASS Mock starts deterministically and computes first schedule
+PASS App neither recalculates nor renders inside frame interval
+PASS Sub-second accumulation before midnight
+PASS Local midnight advances clock and recomputes schedule
+PASS No duplicate daily recalculation
+PASS Mock handles millis rollover
+PASS Store rejects invalid settings
+PASS Unsynchronized clock does not publish prayer schedule
+RESULT: 26 passed, 0 failed

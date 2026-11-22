@@ -1,0 +1,12 @@
+.pio/
+.venv/
+.tools/
+__pycache__/
+test/.build/
+.vscode/
+*.vcd
+secrets.h
+
+include/DashboardAssets.h
+web/.preview-state.json
+

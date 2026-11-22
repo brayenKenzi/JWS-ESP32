@@ -1,0 +1,308 @@
+Processing sim (platform: espressif32@6.10.0; board: esp32doit-devkit-v1; framework: arduino)
+--------------------------------------------------------------------------------
+Removing unused dependencies...
+Library Manager: Removing Adafruit SSD1306 @ 2.5.13
+Library Manager: Removing dependencies...
+Library Manager: Removing Adafruit GFX Library @ 1.13.0
+Library Manager: Removing dependencies...
+Library Manager: Removing Adafruit BusIO @ 1.17.4
+Library Manager: Adafruit BusIO@1.17.4 has been removed!
+Library Manager: Adafruit GFX Library@1.13.0 has been removed!
+Library Manager: Adafruit SSD1306@2.5.13 has been removed!
+Library Manager: Installing adafruit/Adafruit ILI9341 @ 1.6.2
+Downloading 0% 10% 20% 30% 40%
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: Adafruit ILI9341@1.6.2 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing Adafruit STMPE610
+Downloading 0% 10% 20%
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: Adafruit STMPE610@1.1.6 has been installed!
+Library Manager: Installing Adafruit TouchScreen
+Downloading 0% 10% 20%
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: Adafruit TouchScreen@1.1.6 has been installed!
+Library Manager: Installing Adafruit TSC2007
+Downloading 0% 10% 20%
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: Adafruit TSC2007@1.1.2 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing Adafruit SH110X
+Downloading 0% 10% 20%
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: Adafruit SH110X@2.1.15 has been installed!
+Library Manager: Resolving dependencies...
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/esp32doit-devkit-v1.html
+PLATFORM: Espressif 32 (6.10.0) > DOIT ESP32 DEVKIT V1
+HARDWARE: ESP32 240MHz, 320KB RAM, 4MB Flash
+DEBUG: Current (cmsis-dap) External (cmsis-dap, esp-bridge, esp-prog, iot-bus-jtag, jlink, minimodule, olimex-arm-usb-ocd, olimex-arm-usb-ocd-h, olimex-arm-usb-tiny-h, olimex-jtag-tiny, tumpa)
+PACKAGES: 
+ - framework-arduinoespressif32 @ 3.20017.241212+sha.dcc1105b 
+ - tool-esptoolpy @ 1.40501.0 (4.5.1) 
+ - toolchain-xtensa-esp32 @ 8.4.0+2021r2-patch5
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 41 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- Adafruit BusIO @ 1.17.0
+|-- Adafruit GFX Library @ 1.11.11
+|-- Adafruit ILI9341 @ 1.6.2
+|-- SPI @ 2.0.0
+|-- WiFi @ 2.0.0
+|-- JwsCore
+Building in release mode
+Compiling .pio\build\sim\src\SimulationDrivers.cpp.o
+Compiling .pio\build\sim\src\main.cpp.o
+Building .pio\build\sim\bootloader.bin
+Generating partitions .pio\build\sim\partitions.bin
+esptool.py v4.5.1
+Creating esp32 image...
+Merged 1 ELF section
+Successfully created esp32 image.
+Compiling .pio\build\sim\lib1fd\Wire\Wire.cpp.o
+Compiling .pio\build\sim\lib3fb\SPI\SPI.cpp.o
+Archiving .pio\build\sim\lib3fb\libSPI.a
+Compiling .pio\build\sim\libcae\Adafruit BusIO\Adafruit_BusIO_Register.cpp.o
+Archiving .pio\build\sim\lib1fd\libWire.a
+Compiling .pio\build\sim\libcae\Adafruit BusIO\Adafruit_GenericDevice.cpp.o
+Compiling .pio\build\sim\libcae\Adafruit BusIO\Adafruit_I2CDevice.cpp.o
+Compiling .pio\build\sim\libcae\Adafruit BusIO\Adafruit_SPIDevice.cpp.o
+Compiling .pio\build\sim\lib9a0\Adafruit GFX Library\Adafruit_GFX.cpp.o
+Archiving .pio\build\sim\libcae\libAdafruit BusIO.a
+Compiling .pio\build\sim\lib9a0\Adafruit GFX Library\Adafruit_GrayOLED.cpp.o
+Compiling .pio\build\sim\lib9a0\Adafruit GFX Library\Adafruit_SPITFT.cpp.o
+Compiling .pio\build\sim\lib9a0\Adafruit GFX Library\glcdfont.c.o
+Compiling .pio\build\sim\lib4c0\Adafruit ILI9341\Adafruit_ILI9341.cpp.o
+Compiling .pio\build\sim\lib74b\WiFi\WiFi.cpp.o
+Archiving .pio\build\sim\lib9a0\libAdafruit GFX Library.a
+Compiling .pio\build\sim\lib74b\WiFi\WiFiAP.cpp.o
+Compiling .pio\build\sim\lib74b\WiFi\WiFiClient.cpp.o
+Archiving .pio\build\sim\lib4c0\libAdafruit ILI9341.a
+Compiling .pio\build\sim\lib74b\WiFi\WiFiGeneric.cpp.o
+Compiling .pio\build\sim\lib74b\WiFi\WiFiMulti.cpp.o
+Compiling .pio\build\sim\lib74b\WiFi\WiFiSTA.cpp.o
+Compiling .pio\build\sim\lib74b\WiFi\WiFiScan.cpp.o
+Compiling .pio\build\sim\lib74b\WiFi\WiFiServer.cpp.o
+Compiling .pio\build\sim\lib74b\WiFi\WiFiUdp.cpp.o
+Compiling .pio\build\sim\lib1a0\JwsCore\PrayerCalculator.cpp.o
+Compiling .pio\build\sim\lib1a0\JwsCore\Simulation.cpp.o
+Compiling .pio\build\sim\FrameworkArduino\Esp.cpp.o
+Archiving .pio\build\sim\lib1a0\libJwsCore.a
+Compiling .pio\build\sim\FrameworkArduino\FirmwareMSC.cpp.o
+Compiling .pio\build\sim\FrameworkArduino\FunctionalInterrupt.cpp.o
+Archiving .pio\build\sim\lib74b\libWiFi.a
+Compiling .pio\build\sim\FrameworkArduino\HWCDC.cpp.o
+Compiling .pio\build\sim\FrameworkArduino\HardwareSerial.cpp.o
+Compiling .pio\build\sim\FrameworkArduino\IPAddress.cpp.o
+Compiling .pio\build\sim\FrameworkArduino\IPv6Address.cpp.o
+Compiling .pio\build\sim\FrameworkArduino\MD5Builder.cpp.o
+Compiling .pio\build\sim\FrameworkArduino\Print.cpp.o
+Compiling .pio\build\sim\FrameworkArduino\Stream.cpp.o
+Compiling .pio\build\sim\FrameworkArduino\StreamString.cpp.o
+Compiling .pio\build\sim\FrameworkArduino\Tone.cpp.o
+Compiling .pio\build\sim\FrameworkArduino\USB.cpp.o
+Compiling .pio\build\sim\FrameworkArduino\USBCDC.cpp.o
+Compiling .pio\build\sim\FrameworkArduino\USBMSC.cpp.o
+Compiling .pio\build\sim\FrameworkArduino\WMath.cpp.o
+Compiling .pio\build\sim\FrameworkArduino\WString.cpp.o
+Compiling .pio\build\sim\FrameworkArduino\base64.cpp.o
+Compiling .pio\build\sim\FrameworkArduino\cbuf.cpp.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-adc.c.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-bt.c.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-cpu.c.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-dac.c.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-gpio.c.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-i2c-slave.c.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-i2c.c.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-ledc.c.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-matrix.c.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-misc.c.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-psram.c.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-rgb-led.c.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-rmt.c.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-sigmadelta.c.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-spi.c.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-time.c.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-timer.c.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-tinyusb.c.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-touch.c.o
+Compiling .pio\build\sim\FrameworkArduino\esp32-hal-uart.c.o
+Compiling .pio\build\sim\FrameworkArduino\firmware_msc_fat.c.o
+Compiling .pio\build\sim\FrameworkArduino\libb64\cdecode.c.o
+Compiling .pio\build\sim\FrameworkArduino\libb64\cencode.c.o
+Compiling .pio\build\sim\FrameworkArduino\main.cpp.o
+Compiling .pio\build\sim\FrameworkArduino\stdlib_noniso.c.o
+Compiling .pio\build\sim\FrameworkArduino\wiring_pulse.c.o
+Compiling .pio\build\sim\FrameworkArduino\wiring_shift.c.o
+Archiving .pio\build\sim\libFrameworkArduino.a
+Linking .pio\build\sim\firmware.elf
+Retrieving maximum program size .pio\build\sim\firmware.elf
+Checking size .pio\build\sim\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  13.9% (used 45544 bytes from 327680 bytes)
+Flash: [======    ]  59.5% (used 779501 bytes from 1310720 bytes)
+Building .pio\build\sim\firmware.bin with action:
+  "$PYTHONEXE" "$OBJCOPY" --chip esp32 elf2image --flash_mode ${__get_board_flash_mode(__env__)} --flash_freq ${__get_board_f_image(__env__)} --flash_size 4MB --elf-sha256-offset 0xb0 -o $TARGET $SOURCES
+Building .pio\build\sim\firmware.bin
+esptool.py v4.5.1
+Creating esp32 image...
+Merged 27 ELF sections
+Successfully created esp32 image.
+========================= [SUCCESS] Took 71.93 seconds =========================
+
+Processing sim_mock (platform: espressif32@6.10.0; board: esp32doit-devkit-v1; framework: arduino)
+--------------------------------------------------------------------------------
+Removing unused dependencies...
+Library Manager: Removing Adafruit SSD1306 @ 2.5.13
+Library Manager: Removing dependencies...
+Library Manager: Removing Adafruit GFX Library @ 1.13.0
+Library Manager: Removing dependencies...
+Library Manager: Removing Adafruit BusIO @ 1.17.4
+Library Manager: Adafruit BusIO@1.17.4 has been removed!
+Library Manager: Adafruit GFX Library@1.13.0 has been removed!
+Library Manager: Adafruit SSD1306@2.5.13 has been removed!
+Library Manager: Installing adafruit/Adafruit ILI9341 @ 1.6.2
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: Adafruit ILI9341@1.6.2 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing Adafruit STMPE610
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: Adafruit STMPE610@1.1.6 has been installed!
+Library Manager: Installing Adafruit TouchScreen
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: Adafruit TouchScreen@1.1.6 has been installed!
+Library Manager: Installing Adafruit TSC2007
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: Adafruit TSC2007@1.1.2 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing Adafruit SH110X
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: Adafruit SH110X@2.1.15 has been installed!
+Library Manager: Resolving dependencies...
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/esp32doit-devkit-v1.html
+PLATFORM: Espressif 32 (6.10.0) > DOIT ESP32 DEVKIT V1
+HARDWARE: ESP32 240MHz, 320KB RAM, 4MB Flash
+DEBUG: Current (cmsis-dap) External (cmsis-dap, esp-bridge, esp-prog, iot-bus-jtag, jlink, minimodule, olimex-arm-usb-ocd, olimex-arm-usb-ocd-h, olimex-arm-usb-tiny-h, olimex-jtag-tiny, tumpa)
+PACKAGES: 
+ - framework-arduinoespressif32 @ 3.20017.241212+sha.dcc1105b 
+ - tool-esptoolpy @ 1.40501.0 (4.5.1) 
+ - toolchain-xtensa-esp32 @ 8.4.0+2021r2-patch5
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 41 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- Adafruit BusIO @ 1.17.0
+|-- Adafruit GFX Library @ 1.11.11
+|-- Adafruit ILI9341 @ 1.6.2
+|-- SPI @ 2.0.0
+|-- WiFi @ 2.0.0
+|-- JwsCore
+Building in release mode
+Compiling .pio\build\sim_mock\src\SimulationDrivers.cpp.o
+Compiling .pio\build\sim_mock\src\main.cpp.o
+Building .pio\build\sim_mock\bootloader.bin
+Generating partitions .pio\build\sim_mock\partitions.bin
+esptool.py v4.5.1
+Creating esp32 image...
+Merged 1 ELF section
+Successfully created esp32 image.
+Compiling .pio\build\sim_mock\lib1fd\Wire\Wire.cpp.o
+Compiling .pio\build\sim_mock\lib3fb\SPI\SPI.cpp.o
+Compiling .pio\build\sim_mock\lib3ed\Adafruit BusIO\Adafruit_BusIO_Register.cpp.o
+Compiling .pio\build\sim_mock\lib3ed\Adafruit BusIO\Adafruit_GenericDevice.cpp.o
+Archiving .pio\build\sim_mock\lib1fd\libWire.a
+Archiving .pio\build\sim_mock\lib3fb\libSPI.a
+Compiling .pio\build\sim_mock\lib3ed\Adafruit BusIO\Adafruit_I2CDevice.cpp.o
+Compiling .pio\build\sim_mock\lib3ed\Adafruit BusIO\Adafruit_SPIDevice.cpp.o
+Compiling .pio\build\sim_mock\lib343\Adafruit GFX Library\Adafruit_GFX.cpp.o
+Compiling .pio\build\sim_mock\lib343\Adafruit GFX Library\Adafruit_GrayOLED.cpp.o
+Compiling .pio\build\sim_mock\lib343\Adafruit GFX Library\Adafruit_SPITFT.cpp.o
+Archiving .pio\build\sim_mock\lib3ed\libAdafruit BusIO.a
+Compiling .pio\build\sim_mock\lib343\Adafruit GFX Library\glcdfont.c.o
+Compiling .pio\build\sim_mock\libe95\Adafruit ILI9341\Adafruit_ILI9341.cpp.o
+Compiling .pio\build\sim_mock\lib74b\WiFi\WiFi.cpp.o
+Compiling .pio\build\sim_mock\lib74b\WiFi\WiFiAP.cpp.o
+Archiving .pio\build\sim_mock\lib343\libAdafruit GFX Library.a
+Compiling .pio\build\sim_mock\lib74b\WiFi\WiFiClient.cpp.o
+Archiving .pio\build\sim_mock\libe95\libAdafruit ILI9341.a
+Compiling .pio\build\sim_mock\lib74b\WiFi\WiFiGeneric.cpp.o
+Compiling .pio\build\sim_mock\lib74b\WiFi\WiFiMulti.cpp.o
+Compiling .pio\build\sim_mock\lib74b\WiFi\WiFiSTA.cpp.o
+Compiling .pio\build\sim_mock\lib74b\WiFi\WiFiScan.cpp.o
+Compiling .pio\build\sim_mock\lib74b\WiFi\WiFiServer.cpp.o
+Compiling .pio\build\sim_mock\lib74b\WiFi\WiFiUdp.cpp.o
+Compiling .pio\build\sim_mock\lib1a0\JwsCore\PrayerCalculator.cpp.o
+Compiling .pio\build\sim_mock\lib1a0\JwsCore\Simulation.cpp.o
+Compiling .pio\build\sim_mock\FrameworkArduino\Esp.cpp.o
+Archiving .pio\build\sim_mock\lib1a0\libJwsCore.a
+Compiling .pio\build\sim_mock\FrameworkArduino\FirmwareMSC.cpp.o
+Archiving .pio\build\sim_mock\lib74b\libWiFi.a
+Compiling .pio\build\sim_mock\FrameworkArduino\FunctionalInterrupt.cpp.o
+Compiling .pio\build\sim_mock\FrameworkArduino\HWCDC.cpp.o
+Compiling .pio\build\sim_mock\FrameworkArduino\HardwareSerial.cpp.o
+Compiling .pio\build\sim_mock\FrameworkArduino\IPAddress.cpp.o
+Compiling .pio\build\sim_mock\FrameworkArduino\IPv6Address.cpp.o
+Compiling .pio\build\sim_mock\FrameworkArduino\MD5Builder.cpp.o
+Compiling .pio\build\sim_mock\FrameworkArduino\Print.cpp.o
+Compiling .pio\build\sim_mock\FrameworkArduino\Stream.cpp.o
+Compiling .pio\build\sim_mock\FrameworkArduino\StreamString.cpp.o
+Compiling .pio\build\sim_mock\FrameworkArduino\Tone.cpp.o
+Compiling .pio\build\sim_mock\FrameworkArduino\USB.cpp.o
+Compiling .pio\build\sim_mock\FrameworkArduino\USBCDC.cpp.o
+Compiling .pio\build\sim_mock\FrameworkArduino\USBMSC.cpp.o
+Compiling .pio\build\sim_mock\FrameworkArduino\WMath.cpp.o
+Compiling .pio\build\sim_mock\FrameworkArduino\WString.cpp.o
+Compiling .pio\build\sim_mock\FrameworkArduino\base64.cpp.o
+Compiling .pio\build\sim_mock\FrameworkArduino\cbuf.cpp.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-adc.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-bt.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-cpu.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-dac.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-gpio.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-i2c-slave.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-i2c.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-ledc.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-matrix.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-misc.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-psram.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-rgb-led.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-rmt.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-sigmadelta.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-spi.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-time.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-timer.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-tinyusb.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-touch.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\esp32-hal-uart.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\firmware_msc_fat.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\libb64\cdecode.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\libb64\cencode.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\main.cpp.o
+Compiling .pio\build\sim_mock\FrameworkArduino\stdlib_noniso.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\wiring_pulse.c.o
+Compiling .pio\build\sim_mock\FrameworkArduino\wiring_shift.c.o
+Archiving .pio\build\sim_mock\libFrameworkArduino.a
+Linking .pio\build\sim_mock\firmware.elf
+Retrieving maximum program size .pio\build\sim_mock\firmware.elf
+Checking size .pio\build\sim_mock\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]   6.7% (used 22052 bytes from 327680 bytes)
+Flash: [==        ]  23.2% (used 304593 bytes from 1310720 bytes)
+Building .pio\build\sim_mock\firmware.bin with action:
+  "$PYTHONEXE" "$OBJCOPY" --chip esp32 elf2image --flash_mode ${__get_board_flash_mode(__env__)} --flash_freq ${__get_board_f_image(__env__)} --flash_size 4MB --elf-sha256-offset 0xb0 -o $TARGET $SOURCES
+Building .pio\build\sim_mock\firmware.bin
+esptool.py v4.5.1
+Creating esp32 image...
+Merged 2 ELF sections
+Successfully created esp32 image.
+========================= [SUCCESS] Took 42.82 seconds =========================
+
+Environment    Status    Duration
+-------------  --------  ------------
+sim            SUCCESS   00:01:11.927
+sim_mock       SUCCESS   00:00:42.824
+========================= 2 succeeded in 00:01:54.751 =========================

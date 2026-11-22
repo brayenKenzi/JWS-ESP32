@@ -1,0 +1,4 @@
+Source: https://github.com/busel7/JWSMurottal
+Commit: 4d2f7649feab2694f0615918034c2f08d8e8db08
+Working tree changed entries: 0
+Mode: read-only audit; no upstream files changed

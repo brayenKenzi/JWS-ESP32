@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pengaturan Jadwal Waktu Sholat (JWS)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="brand-badge" aria-hidden="true">JWS</div>
+      <div>
+        <h1 id="headerTitle">Pengaturan Jadwal Waktu Sholat</h1>
+        <p class="subtitle">Kota Kotamobagu &bull; WITA</p>
+      </div>
+    </div>
+    <div class="topbar-status">
+      <span id="connectionBadge" class="badge badge-wait">Memuat...</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div id="alertBanner" class="alert hidden" role="status" aria-live="polite"></div>
+
+    <!-- Baris Atas: Jam, Hijriah, Pasaran & Preview Panel P5 / TFT -->
+    <section class="grid-top" aria-label="Status Waktu dan Preview Panel">
+      <article class="card clock-card">
+        <div class="card-header">
+          <div>
+            <span class="eyebrow" id="pasaranMoonText">SABTU PAHING &bull; WANING CRESC</span>
+            <h2 id="currentDateText">Sabtu, 7 November 2026</h2>
+            <p id="currentHijriText" class="hijri-subtitle">26 Jumadil Awal 1448H</p>
+          </div>
+          <button type="button" id="btnSyncPhoneTime" class="btn btn-xs btn-primary" title="Sinkronkan jam & tanggal modul langsung dengan HP Anda (Offline)">
+            &#9201; Sinkronkan Jam HP
+          </button>
+        </div>
+
+        <div class="clock-display" id="liveClockText">12:23:28</div>
+
+        <div class="next-prayer-box" id="nextPrayerBox">
+          <div>
+            <div class="next-prayer-label">MENUJU WAKTU SHOLAT SELANJUTNYA &bull; <span id="nextPrayerDayBadge">SABTU</span></div>
+            <div class="next-prayer-main">
+              <span id="nextPrayerName" class="next-name">Ashar</span>
+              <span id="nextPrayerTime" class="next-time">14:50</span>
+            </div>
+          </div>
+          <div id="nextPrayerCountdown" class="next-countdown">-02:26:32</div>
+        </div>
+      </article>
+
+      <!-- Preview Panel: Pilihan Panel P5 RGB (WF2) Multi-Panel, Multi-Scene & Layar TFT -->
+      <article class="card tft-card">
+        <div class="card-header preview-header">
+          <div>
+            <span class="eyebrow" id="previewResolutionInfo">MODUL HD-WF2 &bull; 2&times;1 PANEL P5 (128&times;32 PX)</span>
+            <h2 id="previewTitle">Preview Panel P5 RGB (WF2)</h2>
+          </div>
+          <div class="preview-tabs" role="tablist" aria-label="Pilih jenis panel preview">
+            <button type="button" id="tabP5" class="tab-btn active" role="tab" aria-selected="true" aria-controls="p5PreviewWrapper">
+              Panel P5 (WF2)
+            </button>
+            <button type="button" id="tabTft" class="tab-btn" role="tab" aria-selected="false" aria-controls="tftPreviewWrapper">
+              Layar TFT
+            </button>
+          </div>
+        </div>
+
+        <!-- Toolbar Multi-Panel Dinamis, Baris, Scene Twinkle, & Aksen Kaligrafi -->
+        <div class="panel-toolbar" aria-label="Pengaturan Multi Panel dan Scene">
+          <div class="panel-pills" role="group" aria-label="Jumlah Panel P5">
+            <button type="button" class="pill-btn" data-panels="1">1 Panel</button>
+            <button type="button" class="pill-btn active" data-panels="2">2 Panel</button>
+            <button type="button" class="pill-btn" data-panels="3">3 Panel</button>
+            <button type="button" class="pill-btn" data-panels="4">4 Panel</button>
+          </div>
+          <div class="panel-pills" role="group" aria-label="Tinggi Baris Panel">
+            <button type="button" class="row-btn active" data-rows="1">1 Baris (32px)</button>
+            <button type="button" class="row-btn" data-rows="2">2 Baris (64px)</button>
+          </div>
+          <label class="calligraphy-toggle" for="quickCalligraphyToggle">
+            <input type="checkbox" id="quickCalligraphyToggle" checked>
+            <span>Kaligrafi Twinkle (&#65018; &amp; &#65010;)</span>
+          </label>
+        </div>
+
+        <!-- Pemilih Scene ala Twinkle: JWS Utama, Iqomah, Petugas Jumat, QRIS -->
+        <div class="scene-bar" role="group" aria-label="Pilih Scene Tampilan">
+          <span class="scene-label">SCENE:</span>
+          <button type="button" class="scene-btn active" data-scene="prayer">JWS 6 Waktu</button>
+          <button type="button" class="scene-btn" data-scene="iqomah">Hitung Mundur Iqomah</button>
+          <button type="button" class="scene-btn" data-scene="khotbah">Petugas Jumat</button>
+          <button type="button" class="scene-btn" data-scene="qr">QR Code / QRIS</button>
+        </div>
+
+        <!-- Mode 1: Simulasi Panel LED Matrix P5 RGB (HUB75 / Modul HD-WF2) -->
+        <div id="p5PreviewWrapper" class="p5-frame" role="tabpanel" aria-labelledby="tabP5">
+          <div id="p5Screen" class="p5-screen panels-2 rows-1">
+            <!-- SCENE A: JWS UTAMA (1 Baris / 2 Baris Twinkle Style — 6 Waktu Sholat) -->
+            <div id="p5ScenePrayer" class="p5-scene-content">
+              <div class="p5-top">
+                <!-- Medali Kaligrafi Kiri (Bitmap 32x32 Asli Twinkle: Lafadz Muhammad ﷺ dengan Palet Cyan-Emerald-Gold) -->
+                <div id="p5CalligraphyMuhammad" class="p5-calligraphy-medallion" title="Kaligrafi Muhammad (Bitmap 32x32 Twinkle)">
+                  <canvas id="p5CalMuhammadCanvas" width="32" height="32" class="p5-cal-canvas" aria-label="Kaligrafi Muhammad"></canvas>
+                </div>
+
+                <div class="p5-header-center">
+                  <div class="p5-meta-left" id="p5MetaLeft">
+                    <div id="p5DayName" class="p5-meta-top">SABTU</div>
+                    <div id="p5PasaranMoon" class="p5-meta-sub">PAHING</div>
+                  </div>
+                  <div class="p5-clock-col">
+                    <div id="p5Clock" class="p5-clock">12:23:28</div>
+                    <div class="p5-day-date-pill">
+                      <span id="p5DayInline" class="p5-day-inline">SABTU</span>
+                      <span class="p5-day-sep">&bull;</span>
+                      <span id="p5Date" class="p5-date">07-11-2026</span>
+                    </div>
+                  </div>
+                  <div class="p5-info-col">
+                    <div id="p5MosqueTitle" class="p5-mosque">Nama Masjid</div>
+                    <div id="p5HijriLine" class="p5-hijri-line">26 Jumadil Awal 1448H</div>
+                    <div class="p5-countdown-row">
+                      <span id="p5NextLabel" class="p5-next-label">&gt;Ashar</span>
+                      <span id="p5NextCountdown" class="p5-next-cd">-02:26:32</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Medali Kaligrafi Kanan (Bitmap 32x32 Asli Twinkle: Lafadz Allah ﷻ dengan Palet Cyan-Emerald-Gold) -->
+                <div id="p5CalligraphyAllah" class="p5-calligraphy-medallion" title="Kaligrafi Allah (Bitmap 32x32 Twinkle)">
+                  <canvas id="p5CalAllahCanvas" width="32" height="32" class="p5-cal-canvas" aria-label="Kaligrafi Allah"></canvas>
+                </div>
+              </div>
+
+              <div class="p5-schedule-bar" id="p5ScheduleBar"></div>
+            </div>
+
+            <!-- SCENE B: HITUNG MUNDUR IQOMAH -->
+            <div id="p5SceneIqomah" class="p5-scene-content hidden">
+              <div class="p5-iqomah-box">
+                <div class="p5-iqomah-title">MENUJU IQOMAH <span id="p5IqomahPrayerName">DZUHUR</span></div>
+                <div id="p5IqomahTimer" class="p5-iqomah-timer">09:45</div>
+                <div class="p5-iqomah-sub">LURUSKAN DAN RAPATKAN SHAF</div>
+              </div>
+            </div>
+
+            <!-- SCENE C: PETUGAS SHOLAT JUMAT & KHOTBAH -->
+            <div id="p5SceneKhotbah" class="p5-scene-content hidden">
+              <div class="p5-khotbah-box">
+                <div class="p5-khotbah-header">PETUGAS SHOLAT JUMAT</div>
+                <div class="p5-officers-grid">
+                  <div class="p5-officer-item"><span class="officer-role">KHATIB:</span> <span id="p5KhatibText">Ust. H. Ahmad Fauzi</span></div>
+                  <div class="p5-officer-item"><span class="officer-role">IMAM:</span> <span id="p5ImamText">Ust. Abdurrahman</span></div>
+                  <div class="p5-officer-item"><span class="officer-role">MUADZIN:</span> <span id="p5MuadzinText">Sdr. Rizky Pratama</span></div>
+                  <div class="p5-officer-item"><span class="officer-role">BILAL:</span> <span id="p5BilalText">Sdr. Hidayatullah</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SCENE D: QR CODE / QRIS INFAQ MASJID -->
+            <div id="p5SceneQr" class="p5-scene-content hidden">
+              <div class="p5-qr-layout">
+                <canvas id="p5QrCanvas" width="63" height="63" class="p5-qr-canvas" aria-label="QR Code Masjid"></canvas>
+                <div class="p5-qr-copy">
+                  <div class="p5-qr-headline">SCAN QRIS INFAQ MASJID</div>
+                  <div id="p5QrMosque" class="p5-qr-sub">Nama Masjid</div>
+                  <div id="p5QrUrlText" class="p5-qr-url">https://masjid-kotamobagu.id/infaq</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="p5-ticker-bar">
+              <div id="p5TickerText" class="p5-ticker-text">Selamat datang. Mari menjaga ketenangan dan kebersihan masjid.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mode 2: Simulasi Layar TFT 320x240 -->
+        <div id="tftPreviewWrapper" class="tft-bezel hidden" role="tabpanel" aria-labelledby="tabTft">
+          <div class="tft-screen">
+            <div class="tft-topbar">
+              <span id="tftCalMuhammad" class="tft-cal-badge" aria-hidden="true">&#1605;&#1581;&#1605;&#1583;</span>
+              <span id="tftMosqueTitle" class="tft-title">Nama Masjid</span>
+              <span id="tftCalAllah" class="tft-cal-badge" aria-hidden="true">&#1575;&#1604;&#1604;&#1607;</span>
+            </div>
+            <div id="tftClock" class="tft-clock">12:23:28</div>
+            <div class="tft-date-row">
+              <span id="tftDate">Sabtu, 2026-11-07</span>
+            </div>
+            <div class="tft-divider"></div>
+            <div class="tft-grid" id="tftScheduleGrid"></div>
+            <div class="tft-ticker-bar">
+              <div id="tftTickerText" class="tft-ticker-text">Selamat datang. Mari menjaga ketenangan dan kebersihan masjid.</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Dock Remote Kontrol Cepat Layar TFT & Tema -->
+      <div class="remote-dock">
+        <div class="remote-block">
+          <span class="remote-label">Tema Warna TFT</span>
+          <div class="theme-buttons" role="group" aria-label="Pilih Tema Layar">
+            <button type="button" class="btn btn-sm theme-btn theme-chip-0" data-theme="0">🌟 Midnight Gold</button>
+            <button type="button" class="btn btn-sm theme-btn theme-chip-1" data-theme="1">🌿 Emerald Mosque</button>
+            <button type="button" class="btn btn-sm theme-btn theme-chip-2" data-theme="2">🌌 Royal Sapphire</button>
+            <button type="button" class="btn btn-sm theme-btn theme-chip-3" data-theme="3">🌅 Cyber Sunset</button>
+          </div>
+        </div>
+        <div class="remote-block">
+          <span class="remote-label">Remote Slide TFT</span>
+          <div class="slide-buttons" role="group" aria-label="Pindah Slide Layar">
+            <button type="button" class="btn btn-sm slide-btn" data-slide="0">🕌 1. JWS</button>
+            <button type="button" class="btn btn-sm slide-btn" data-slide="1">⛅ 2. Cuaca</button>
+            <button type="button" class="btn btn-sm slide-btn" data-slide="2">📈 3. Saham</button>
+            <button type="button" class="btn btn-sm slide-btn" data-slide="3">📰 4. Berita</button>
+            <button type="button" class="btn btn-sm slide-btn" data-slide="4">💳 5. Masjid</button>
+            <button type="button" class="btn btn-sm slide-btn" data-slide="5">🖧 6. MikroTik</button>
+            <button type="button" class="btn btn-sm slide-btn" data-slide="6">🤖 7. Upin AI</button>
+            <button type="button" class="btn btn-sm slide-btn" data-slide="7">⏱️ 8. Fokus &amp; Sistem</button>
+            <button type="button" class="btn btn-sm slide-btn" data-slide="8">⚡ 9. Kontrol Relay</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigasi Seksi Pengaturan -->
+    <nav class="section-nav" role="tablist" aria-label="Kategori Pengaturan">
+      <button type="button" class="sec-tab-btn active" data-sec="jws" role="tab" aria-selected="true">
+        &#128332; Jadwal &amp; Masjid
+      </button>
+      <button type="button" class="sec-tab-btn" data-sec="xiaozhi" role="tab" aria-selected="false">
+        &#129302; Upin AI &amp; Agent
+      </button>
+      <button type="button" class="sec-tab-btn" data-sec="mikrotik" role="tab" aria-selected="false">
+        &#128423; MikroTik NOC
+      </button>
+      <button type="button" class="sec-tab-btn" data-sec="feeds" role="tab" aria-selected="false">
+        &#128200; Saham &amp; Info
+      </button>
+      <button type="button" class="sec-tab-btn" data-sec="system" role="tab" aria-selected="false">
+        &#9881;&#65039; Sistem &amp; Wi-Fi
+      </button>
+      <button type="button" class="sec-tab-btn" data-sec="all" role="tab" aria-selected="false">
+        &#128203; Semua Seksi
+      </button>
+    </nav>
+
+    <!-- Form Utama & Panel Seksi Modular -->
+    <form id="jwsConfigForm" class="sectioned-form" novalidate>
+      <!-- SEKSI 1: JADWAL SHOLAT, MASJID, JUMAT, QRIS & PANEL -->
+      <div class="sec-panel active" id="sec-jws" data-section="jws">
+        <div class="sec-grid">
+          <section class="card card-full" aria-labelledby="revisiHeading">
+            <div class="card-header">
+              <div>
+                <span class="eyebrow">PENYESUAIAN MENIT (-30 S/D +30) &amp; IQOMAH</span>
+                <h2 id="revisiHeading">Revisi Waktu Sholat &amp; Iqomah</h2>
+              </div>
+              <div class="preset-actions">
+                <button type="button" id="btnResetZero" class="btn btn-xs btn-ghost">Reset (0)</button>
+                <button type="button" id="btnPresetIhtiyat" class="btn btn-xs btn-ghost">+2 Menit</button>
+              </div>
+            </div>
+
+            <div id="orderValidationError" class="inline-error hidden" role="alert"></div>
+
+            <div class="table-wrap">
+              <table class="prayer-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Waktu</th>
+                    <th scope="col">Jam Dasar</th>
+                    <th scope="col">Revisi (Menit)</th>
+                    <th scope="col">Jam Tampil</th>
+                    <th scope="col">Iqomah (Mnt)</th>
+                  </tr>
+                </thead>
+                <tbody id="prayerTableBody"></tbody>
+              </table>
+            </div>
+
+            <div class="sub-grid-2">
+              <div class="form-group">
+                <label for="hijriOffsetInput">Koreksi Kalender Hijriah (Hari)</label>
+                <select id="hijriOffsetInput" class="select-input">
+                  <option value="-2">-2 Hari</option>
+                  <option value="-1">-1 Hari</option>
+                  <option value="0" selected>0 Hari (Standar)</option>
+                  <option value="1">+1 Hari</option>
+                  <option value="2">+2 Hari</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="adzanDurationInput">Durasi Tampilan Adzan (Menit)</label>
+                <input type="number" id="adzanDurationInput" class="select-input" min="1" max="10" value="4">
+              </div>
+            </div>
+          </section>
+
+          <section class="card" aria-label="Petugas Sholat Jumat dan QRIS">
+            <div class="card-header">
+              <div>
+                <span class="eyebrow">SCENE KHOTBAH JUMAT &amp; QRIS INFAQ</span>
+                <h2>Petugas Sholat Jumat &amp; QR Code</h2>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="switch-row">
+                <label for="khotbahEnabledInput">Aktifkan Scene Petugas Sholat Jumat (Khotbah)</label>
+                <input type="checkbox" id="khotbahEnabledInput" checked>
+              </div>
+            </div>
+
+            <div class="sub-grid-2">
+              <div class="form-group">
+                <label for="khatibInput">Nama Khatib Jumat</label>
+                <input type="text" id="khatibInput" maxlength="32" placeholder="Ust. H. Ahmad Fauzi">
+              </div>
+              <div class="form-group">
+                <label for="imamInput">Nama Imam</label>
+                <input type="text" id="imamInput" maxlength="32" placeholder="Ust. Abdurrahman">
+              </div>
+              <div class="form-group">
+                <label for="muadzinInput">Nama Muadzin</label>
+                <input type="text" id="muadzinInput" maxlength="32" placeholder="Sdr. Rizky Pratama">
+              </div>
+              <div class="form-group">
+                <label for="bilalInput">Nama Bilal</label>
+                <input type="text" id="bilalInput" maxlength="32" placeholder="Sdr. Hidayatullah">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="switch-row">
+                <label for="qrEnabledInput">Aktifkan Scene QR Code / QRIS Infaq Masjid</label>
+                <input type="checkbox" id="qrEnabledInput" checked>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="qrTextInput">Teks / Tautan QR Code (QRIS / Link Donasi / Wi-Fi)</label>
+              <input type="text" id="qrTextInput" maxlength="128" placeholder="https://masjid-kotamobagu.id/infaq">
+            </div>
+          </section>
+
+          <section class="card" aria-labelledby="identitasHeading">
+            <div class="card-header">
+              <div>
+                <span class="eyebrow">IDENTITAS MASJID &amp; PANEL P5 / TFT</span>
+                <h2 id="identitasHeading">Masjid &amp; Pengaturan Panel</h2>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="mosqueNameInput">Nama Masjid</label>
+              <input
+                type="text"
+                id="mosqueNameInput"
+                name="mosqueName"
+                maxlength="64"
+                autocomplete="off"
+                placeholder="Contoh: Masjid Agung Baitul Makmur"
+              >
+              <div class="field-footer">
+                <span class="field-hint">Maksimal 64 karakter</span>
+                <span id="mosqueNameCount" class="char-count">11/64</span>
+              </div>
+            </div>
+
+            <div class="sub-grid-2">
+              <div class="form-group">
+                <label for="panelCountSelect">Lebar Panel P5 (Kolom)</label>
+                <select id="panelCountSelect" name="panelCount" class="select-input">
+                  <option value="1">1 Panel (64 px / 32 cm)</option>
+                  <option value="2" selected>2 Panel (128 px / 64 cm)</option>
+                  <option value="3">3 Panel (192 px / 96 cm)</option>
+                  <option value="4">4 Panel (256 px / 128 cm)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="panelRowsSelect">Tinggi Panel P5 (Baris)</label>
+                <select id="panelRowsSelect" name="panelRows" class="select-input">
+                  <option value="1" selected>1 Baris (32 px / 16 cm)</option>
+                  <option value="2">2 Baris (64 px / 32 cm)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="brightnessInput">
+                Kecerahan Panel P5 (Brightness): <strong id="brightnessValue">60%</strong>
+              </label>
+              <input type="range" id="brightnessInput" min="5" max="100" step="5" value="60">
+            </div>
+
+            <div class="form-group">
+              <div class="switch-row">
+                <label for="calligraphyEnabledInput">Tampilkan Medali Kaligrafi Muhammad (&#1605;&#1581;&#1605;&#1583;) &amp; Allah (&#1575;&#1604;&#1604;&#1607;)</label>
+                <input type="checkbox" id="calligraphyEnabledInput" name="calligraphyEnabled" checked>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- SEKSI 2: XIAOZHI AI, CUSTOM AGENT BUILDER & MIC INMP441 -->
+      <div class="sec-panel" id="sec-xiaozhi" data-section="xiaozhi">
+        <div class="sec-grid">
+          <section class="card" aria-label="Custom Agent Xiaozhi AI">
+            <div class="card-header">
+              <div>
+                <span class="eyebrow">CUSTOM AGENT PERSONA &amp; GEMINI 2.0 AUDIO</span>
+                <h2>Kustomisasi Agent AI Lokal &amp; Cloud</h2>
+              </div>
+              <span id="xzStatusHint" class="badge badge-demo">Menunggu status...</span>
+            </div>
+
+            <div class="form-group">
+              <label for="xzAgentNameInput">Nama Agent AI (Tampil di Header TFT)</label>
+              <input
+                type="text"
+                id="xzAgentNameInput"
+                maxlength="26"
+                placeholder="Contoh: Xiaozhi Islami AI / Ustadz Bot / NOC Bot"
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="xzAgentPromptInput">Instruksi / Persona Agent (System Prompt)</label>
+              <textarea
+                id="xzAgentPromptInput"
+                rows="3"
+                maxlength="190"
+                placeholder="Asisten masjid &amp; NOC MikroTik yg ramah, islami, cerdas, jawab singkat padat max 85 huruf."
+              ></textarea>
+              <span class="field-hint">Agent otomatis mendapat konteks waktu sholat Kotamobagu, cuaca, &amp; statistik MikroTik.</span>
+            </div>
+
+            <div class="form-group">
+              <label for="xzApiBaseInput">Base URL OpenAI-Compatible (Oktacloud / Groq / OpenRouter)</label>
+              <input
+                type="text"
+                id="xzApiBaseInput"
+                maxlength="120"
+                placeholder="https://api.oktacloud.id/v1 (Kosongkan untuk Gemini / AI Gratis)"
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="xzApiModelInput">Model ID AI (Opsional)</label>
+              <input
+                type="text"
+                id="xzApiModelInput"
+                maxlength="60"
+                placeholder="Contoh: gpt-4o-mini / gemini-2.0-flash / llama-3.3-70b"
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="xzApiKeyInput">API Key (Oktacloud / OpenAI-Compatible / Gemini)</label>
+              <input
+                type="password"
+                id="xzApiKeyInput"
+                autocomplete="off"
+                maxlength="120"
+                placeholder="sk-... atau AIzaSy... (Kosongkan jika tidak mengubah key)"
+              >
+            </div>
+
+            <div class="btn-row">
+              <button type="button" id="btnSaveXzKey" class="btn btn-primary">Simpan Profil Agent &amp; Key</button>
+              <button type="button" id="btnClearXzKey" class="btn btn-ghost">&#128268; Putus Gemini (Pakai AI Internet Gratis)</button>
+            </div>
+          </section>
+
+          <section class="card" aria-label="Uji Suara INMP441 dan Percakapan Live">
+            <div class="card-header">
+              <div>
+                <span class="eyebrow">INMP441 I2S MIC &amp; PSRAM WAV BUFFER</span>
+                <h2>Dialog Live &amp; Rekam Suara 3 Detik</h2>
+              </div>
+            </div>
+
+            <div class="xz-dialog-preview">
+              <div class="xz-dialog-row">
+                <span class="xz-tag xz-tag-user">USER</span>
+                <span id="xzLiveQueryText" class="xz-msg">-</span>
+              </div>
+              <div class="xz-dialog-row">
+                <span class="xz-tag xz-tag-ai">AGENT</span>
+                <span id="xzLiveReplyText" class="xz-msg">-</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="xzQuestionInput">Kirim Pertanyaan Teks ke Layar Xiaozhi</label>
+              <div class="input-action-row">
+                <input
+                  type="text"
+                  id="xzQuestionInput"
+                  placeholder="Tanya apa saja ke AI Internet (pengetahuan umum, Islam, jaringan, cuaca, dll)..."
+                  maxlength="110"
+                >
+                <button type="button" id="btnAskXiaozhi" class="btn btn-primary">Tanya Teks</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <button type="button" id="btnWebSpeechXiaozhi" class="btn btn-accent btn-block">
+                &#127897;&#65039; Bicara via Mic HP / Browser (AI Internet Gratis)
+              </button>
+              <button type="button" id="btnRecordVoiceXiaozhi" class="btn btn-ghost btn-block" style="margin-top: 8px;">
+                &#127897;&#65039; Test Panggil &apos;Halo Upin&apos; via Mic Alat INMP441 (2 Detik)
+              </button>
+              <span class="field-hint" style="display:block; margin-top:8px;">
+                Pin Mic INMP441 ESP32-S3: <strong>SCK=GPIO4</strong> &bull; <strong>WS=GPIO5</strong> &bull; <strong>SD=GPIO6</strong> &bull; <strong>L/R=GND</strong> &bull; <strong>VDD=3.3V</strong>.
+              </span>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- SEKSI 3: MIKROTIK NOC MONITOR & PPPOE / HOTSPOT -->
+      <div class="sec-panel" id="sec-mikrotik" data-section="mikrotik">
+        <div class="sec-grid">
+          <section class="card" aria-label="Konfigurasi MikroTik NOC">
+            <div class="card-header">
+              <div>
+                <span class="eyebrow">ROUTEROS API PORT 8728 (CORE 0 NON-BLOCKING)</span>
+                <h2>Konfigurasi MikroTik NOC</h2>
+              </div>
+              <span id="mtikStatusHint" class="badge badge-demo">Mode: Demo / Menunggu Koneksi</span>
+            </div>
+
+            <div class="sub-grid-2">
+              <div class="form-group">
+                <label for="mtikHostInput">IP Address Router MikroTik</label>
+                <input type="text" id="mtikHostInput" placeholder="192.168.88.1" maxlength="31">
+              </div>
+              <div class="form-group">
+                <label for="mtikPortInput">Port API (Default 8728)</label>
+                <input type="number" id="mtikPortInput" class="select-input" min="1" max="65535" value="8728">
+              </div>
+              <div class="form-group">
+                <label for="mtikUserInput">Username API (Disarankan group read)</label>
+                <input type="text" id="mtikUserInput" placeholder="admin" maxlength="23">
+              </div>
+              <div class="form-group">
+                <label for="mtikPassInput">Password API</label>
+                <input type="password" id="mtikPassInput" placeholder="Kosongkan jika tidak ganti..." maxlength="31">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="mtikIfacesInput">4 Interface Monitor (Pisahkan koma)</label>
+              <div class="input-action-row">
+                <input type="text" id="mtikIfacesInput" placeholder="ether1,ether2,ether3,ether4" value="ether1,ether2,ether3,ether4" maxlength="63">
+                <button type="button" id="btnSaveMikrotik" class="btn btn-primary">Simpan MikroTik</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" aria-label="Panduan Tampilan NOC MikroTik">
+            <div class="card-header">
+              <div>
+                <span class="eyebrow">FITUR LAYAR NOC &amp; REMOTE TOUCH</span>
+                <h2>Grafik CCR, PPPoE &amp; Hotspot Aktif</h2>
+              </div>
+            </div>
+
+            <ul class="info-checklist">
+              <li><strong>Grafik CCR Real-Time:</strong> Menghitung delta hardware byte TX/RX per detik pada 4 port Ethernet tanpa membebani CPU UI (Core 1).</li>
+              <li><strong>Top PPPoE &amp; Hotspot Users:</strong> Tap kotak <em>PPPoE</em> atau <em>Hotspot</em> di Slide 6 pada layar TFT untuk melihat hingga 15 user aktif beserta trafik &amp; uptime.</li>
+              <li><strong>Detail Port &amp; Simple Queue:</strong> Tap bar grafik salah satu interface untuk melihat grafik historis TX/RX dan trafik Queue terkait.</li>
+              <li><strong>Keamanan RouterOS:</strong> Buat user khusus grup <code>read</code> &amp; <code>api</code> di MikroTik bila hanya digunakan untuk monitoring.</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+
+      <!-- SEKSI 4: RUNNING TEXT & WATCHLIST SAHAM -->
+      <div class="sec-panel" id="sec-feeds" data-section="feeds">
+        <div class="sec-grid">
+          <section class="card" aria-label="Running Text Masjid">
+            <div class="card-header">
+              <div>
+                <span class="eyebrow">PENGUMUMAN PANEL P5 &amp; FOOTER TFT</span>
+                <h2>Teks Berjalan (Running Text)</h2>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="switch-row">
+                <label for="runningTextEnabledInput">Aktifkan Teks Berjalan (Running Text)</label>
+                <input type="checkbox" id="runningTextEnabledInput" name="runningTextEnabled" checked>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="runningTextInput">Pesan Teks Berjalan</label>
+              <textarea
+                id="runningTextInput"
+                name="runningText"
+                rows="3"
+                maxlength="256"
+                placeholder="Masukkan pesan untuk jamaah..."
+              ></textarea>
+              <div class="field-footer">
+                <span class="field-hint">Maksimal 256 karakter</span>
+                <span id="runningTextCount" class="char-count">62/256</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="scrollIntervalInput">
+                Kecepatan Teks Berjalan: <strong id="scrollIntervalValue">80 ms</strong>
+              </label>
+              <input
+                type="range"
+                id="scrollIntervalInput"
+                name="scrollIntervalMs"
+                min="40"
+                max="250"
+                step="5"
+                value="80"
+              >
+              <div class="range-labels">
+                <span>Cepat (40 ms)</span>
+                <span>Normal</span>
+                <span>Lambat (250 ms)</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" aria-label="Watchlist Saham IDX">
+            <div class="card-header">
+              <div>
+                <span class="eyebrow">SLIDE CUACA, IHSG &amp; CNBC INDONESIA</span>
+                <h2>Watchlist Saham IDX &amp; Feed Online</h2>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="stockWatchlistInput">Watchlist Saham IDX (Pisahkan dengan koma)</label>
+              <div class="input-action-row">
+                <input type="text" id="stockWatchlistInput" placeholder="Contoh: BBCA, BBRI, TLKM, ASII" value="BBCA, BBRI, TLKM, ASII">
+                <button type="button" id="btnSaveStocks" class="btn btn-primary">Simpan Saham</button>
+              </div>
+              <span class="field-hint">Data IHSG &amp; harga saham di-update otomatis di Core 0 via Yahoo Finance selama terhubung ke Wi-Fi.</span>
+            </div>
+
+            <ul class="info-checklist">
+              <li><strong>Slide 2 (Cuaca):</strong> Prakiraan cuaca Kotamobagu real-time dari Open-Meteo API.</li>
+              <li><strong>Slide 3 (Saham):</strong> IHSG + 4 emiten watchlist Anda (tap nama emiten di TFT untuk detail).</li>
+              <li><strong>Slide 4 (Berita RI):</strong> Headline terkini dari RSS CNBC Indonesia.</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+
+      <!-- SEKSI 5: SISTEM, AUDIO, HEMAT DAYA & WI-FI -->
+      <div class="sec-panel" id="sec-system" data-section="system">
+        <div class="sec-grid">
+          <section class="card" aria-label="Hemat Daya dan Audio DFPlayer">
+            <div class="card-header">
+              <div>
+                <span class="eyebrow">OTOMASI DAYA MALAM &amp; AUDIO TARHIM</span>
+                <h2>Hemat Daya &amp; Audio Adzan</h2>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="switch-row">
+                <label for="autoSleepEnabledInput">Mode Hemat Daya Malam (Auto-Sleep Layar)</label>
+                <input type="checkbox" id="autoSleepEnabledInput">
+              </div>
+            </div>
+
+            <div class="sub-grid-2">
+              <div class="form-group">
+                <label for="sleepHourInput">Jam Mulai Tidur (0..23)</label>
+                <input type="number" id="sleepHourInput" class="select-input" min="0" max="23" value="23">
+              </div>
+              <div class="form-group">
+                <label for="wakeHourInput">Jam Bangun Layar (0..23)</label>
+                <input type="number" id="wakeHourInput" class="select-input" min="0" max="23" value="3">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="switch-row">
+                <label for="buzzerEnabledInput">Bunyi Buzzer / Beep Saat Adzan &amp; Iqomah</label>
+                <input type="checkbox" id="buzzerEnabledInput" checked>
+              </div>
+            </div>
+
+            <div class="sub-grid-2">
+              <div class="form-group">
+                <label for="audioVolumeInput">Volume Audio DFPlayer (0..30)</label>
+                <input type="number" id="audioVolumeInput" class="select-input" min="0" max="30" value="20">
+              </div>
+              <div class="form-group">
+                <label for="tarhimOffsetInput">Putar Tarhim Sebelum Adzan (Mnt)</label>
+                <input type="number" id="tarhimOffsetInput" class="select-input" min="-15" max="0" value="-6">
+              </div>
+            </div>
+          </section>
+
+          <section class="card" aria-label="Koneksi Wi-Fi Rumah">
+            <div class="card-header">
+              <div>
+                <span class="eyebrow">JARINGAN &amp; AKSES INTERNET STA / AP</span>
+                <h2>Koneksi Wi-Fi Perangkat</h2>
+              </div>
+            </div>
+
+            <div class="sub-grid-2">
+              <div class="form-group">
+                <label for="wifiSsidInput">Nama Wi-Fi (SSID)</label>
+                <input type="text" id="wifiSsidInput" placeholder="Contoh: WiFi-Rumah" maxlength="32">
+              </div>
+              <div class="form-group">
+                <label for="wifiPasswordInput">Kata Sandi (Password)</label>
+                <input type="password" id="wifiPasswordInput" placeholder="Password Wi-Fi..." maxlength="64">
+              </div>
+            </div>
+
+            <div class="wifi-action-row">
+              <span id="wifiStatusText" class="field-hint">Status: AP Aktif (JWS-KOTAMOBAGU &bull; 192.168.4.1)</span>
+              <button type="button" id="btnSaveWifi" class="btn btn-primary">&#128246; Sambungkan Wi-Fi</button>
+            </div>
+          </section>
+
+          <section class="card card-full" aria-label="Kesehatan Sistem ESP32-S3">
+            <div class="card-header">
+              <div>
+                <span class="eyebrow">TELEMETRI REAL-TIME ESP32-S3 N16R8 (8 MB OPI PSRAM)</span>
+                <h2>Kesehatan Sistem &amp; Memori</h2>
+              </div>
+              <button type="button" id="btnRebootEsp" class="btn btn-ghost">&#128260; Restart ESP32</button>
+            </div>
+            <div id="sysHealthSummary" class="field-hint" style="font-size:0.95rem;line-height:1.6;">
+              Memuat telemetri RAM, PSRAM, Wi-Fi, dan Uptime perangkat...
+            </div>
+          </section>
+
+          <section class="card card-full" aria-label="Kontrol Relay 2-Channel">
+            <div class="card-header">
+              <div>
+                <span class="eyebrow">GPIO 15 (ACT-HIGH) &bull; GPIO 16 (ACT-LOW)</span>
+                <h2>Kontrol Relay 2-Channel</h2>
+              </div>
+              <div class="btn-row">
+                <button type="button" id="btnRelayAllOn" class="btn btn-sm btn-primary">Nyalakan Semua</button>
+                <button type="button" id="btnRelayAllOff" class="btn btn-sm btn-ghost">Matikan Semua</button>
+              </div>
+            </div>
+            <div class="btn-row" style="flex-wrap:wrap;gap:8px;margin-top:8px;">
+              <button type="button" id="btnToggleR1" class="btn btn-ghost">Relay 1 (GPIO15 HIGH): OFF</button>
+              <button type="button" id="btnToggleR2" class="btn btn-ghost">Relay 2 (GPIO16 LOW): OFF</button>
+            </div>
+          </section>
+
+          <section class="card card-full" aria-label="Sinric Pro dan Google Home">
+            <div class="card-header">
+              <div>
+                <span class="eyebrow">SMART HOME CLOUD &bull; SINKRON 2 ARAH KE GOOGLE HOME</span>
+                <h2>Integrasi Sinric Pro (Relay 1 &amp; Relay 2)</h2>
+              </div>
+              <span id="sinricStatusBadge" class="badge badge-demo">Belum dikonfigurasi</span>
+            </div>
+
+            <div class="form-group">
+              <div class="switch-row">
+                <label for="sinricEnabledInput">Aktifkan Koneksi Sinric Pro (Google Home)</label>
+                <input type="checkbox" id="sinricEnabledInput" checked>
+              </div>
+            </div>
+
+            <div class="sub-grid-2">
+              <div class="form-group">
+                <label for="sinricAppKeyInput">Sinric Pro App Key</label>
+                <input type="password" id="sinricAppKeyInput" autocomplete="off" maxlength="60" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+              </div>
+              <div class="form-group">
+                <label for="sinricAppSecretInput">Sinric Pro App Secret</label>
+                <input type="password" id="sinricAppSecretInput" autocomplete="off" maxlength="90" placeholder="xxxxxxxx-xxxx-...-xxxxxxxxxxxx">
+              </div>
+            </div>
+
+            <div class="sub-grid-2">
+              <div class="form-group">
+                <label for="sinricDev1Input">Device ID Relay 1 (GPIO 15 Active-HIGH)</label>
+                <input type="text" id="sinricDev1Input" maxlength="30" placeholder="24 karakter Device ID Switch 1">
+              </div>
+              <div class="form-group">
+                <label for="sinricDev2Input">Device ID Relay 2 (GPIO 16 Active-LOW)</label>
+                <input type="text" id="sinricDev2Input" maxlength="30" placeholder="24 karakter Device ID Switch 2">
+              </div>
+            </div>
+
+            <div class="btn-row">
+              <button type="button" id="btnSaveSinric" class="btn btn-primary">&#9729;&#65039; Simpan &amp; Sambungkan Sinric Pro</button>
+              <button type="button" id="btnClearSinric" class="btn btn-ghost">Hapus Konfigurasi</button>
+            </div>
+          </section>
+
+          <section class="card card-full" aria-label="Chronos BLE Smartphone Companion">
+            <div class="card-header">
+              <div>
+                <span class="eyebrow">BLUETOOTH BLE COMPANION &bull; NAMA BLUETOOTH: JWS-UPIN-S3</span>
+                <h2>ChronosESP32 Smartphone Companion (Notifikasi, Jam BLE &amp; Kontrol HP)</h2>
+              </div>
+              <span id="chronosStatusBadge" class="badge badge-demo">BLE: Menunggu HP</span>
+            </div>
+
+            <div id="chronosNotifSummary" class="field-hint" style="font-size:0.94rem;line-height:1.5;margin-bottom:10px;">
+              Buka aplikasi <strong>Chronos</strong> di Android/iOS &rarr; sambungkan ke Bluetooth <strong>JWS-UPIN-S3</strong> untuk sinkronisasi jam otomatis, pop-up notifikasi WA/Telegram/Telepon di layar TFT, &amp; kontrol HP lewat suara UPIN AI.
+            </div>
+
+            <div class="btn-row" style="flex-wrap:wrap;gap:8px;">
+              <button type="button" id="btnChronosFindPhone" class="btn btn-primary">&#128276; Cari HP (Bunyikan)</button>
+              <button type="button" id="btnChronosMusicPlay" class="btn btn-ghost">&#9199;&#65039; Play / Pause Musik</button>
+              <button type="button" id="btnChronosMusicPrev" class="btn btn-ghost">&#9198;&#65039; Lagu Sebelumnya</button>
+              <button type="button" id="btnChronosMusicNext" class="btn btn-ghost">&#9197;&#65039; Lagu Berikutnya</button>
+              <button type="button" id="btnChronosCamera" class="btn btn-ghost">&#128248; Foto Kamera HP</button>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- Bar Simpan Terpadu (Sticky Footer untuk Konfigurasi JWS) -->
+      <div class="save-bar">
+        <div class="save-box">
+          <div class="save-summary">
+            <span id="unsavedIndicator" class="status-dot status-clean"></span>
+            <span id="unsavedText">Semua perubahan sudah tersimpan.</span>
+          </div>
+          <div class="save-buttons">
+            <button type="button" id="btnRevertChanges" class="btn btn-ghost" disabled>Batal</button>
+            <button type="submit" id="btnSaveConfig" class="btn btn-primary">Simpan Perubahan JWS</button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

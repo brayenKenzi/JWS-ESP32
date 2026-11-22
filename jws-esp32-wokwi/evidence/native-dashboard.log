@@ -1,0 +1,43 @@
+Compiling native C++ core tests...
+PASS Makassar
+PASS Jakarta
+PASS Jayapura
+PASS Makkah
+PASS Makassar leap
+PASS Imsak = corrected Subuh minus 10 minutes
+PASS UTC offset shifts every event by exactly 60 minutes
+PASS Ihtiyat affects prayers and imsak, leaves Syuruq unchanged
+PASS Hanafi Ashar is later than standard
+PASS Calendar validation and supported year boundaries
+PASS Invalid date produces invalid schedule
+PASS Polar day explicitly unavailable; no invented high-latitude times
+PASS Reject NaN latitude
+PASS Reject invalid timezone
+PASS Zero latitude/longitude/timezone remain valid configuration
+PASS Zero-minute imsak accepted
+PASS Invalid minute formatted explicitly
+PASS Last minute formatted safely
+PASS Mock starts deterministically and computes first schedule
+PASS App neither recalculates nor renders inside frame interval
+PASS Sub-second accumulation before midnight
+PASS Local midnight advances clock and recomputes schedule
+PASS No duplicate daily recalculation
+PASS Mock handles millis rollover
+PASS Store rejects invalid settings
+PASS Unsynchronized clock does not publish prayer schedule
+PASS Official Kemenag Kotamobagu 2026-11-05 fixture (not astronomical calculation)
+PASS Official table indexing validates leap days
+PASS Official table never relabels a different year's data
+PASS All imported official daily events are ordered and inside the day
+PASS Zero corrections preserve official values with no implicit ihtiyat
+PASS Per-prayer positive/negative corrections do not mutate official base
+PASS Corrections cannot reorder Imsak and Subuh
+PASS Correction bounds enforced at 30 minutes
+PASS Empty mosque name rejected
+PASS Unterminated running text rejected safely
+PASS Zero running-text interval rejected
+PASS App obtains official schedule through injected provider
+PASS Saved edits recalculate same day without resetting mock clock
+PASS Invalid correction update is atomic and preserves current config
+PASS Persistence failure never reports an applied configuration
+RESULT: 41 passed, 0 failed

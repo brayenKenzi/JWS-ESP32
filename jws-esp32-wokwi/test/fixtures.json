@@ -1,0 +1,108 @@
+{
+  "reference": "PrayTimes.js v2.5, Hamid Zarrabi-Zadeh / PrayTimes.org, LGPL-3.0",
+  "url": "https://praytimes.org/code/v2/js/PrayTimes.js",
+  "sha256": "f0e8442410446b1bf2db613bdebd3aa3aef5cdf5483068fbd9212d5acaa180fd",
+  "settings": "fajr=20, isha=18, imsak=10min, ihtiyat=2 except sunrise, asr=Standard, elevation=0, highLats=None, DST=0",
+  "fixtures": [
+    {
+      "name": "Makassar",
+      "date": [
+        2026,
+        11,
+        3
+      ],
+      "latitude": -5.1477,
+      "longitude": 119.4327,
+      "utcOffsetMinutes": 480,
+      "minutes": [
+        249,
+        259,
+        337,
+        708,
+        906,
+        1077,
+        1149
+      ]
+    },
+    {
+      "name": "Jakarta",
+      "date": [
+        2026,
+        3,
+        20
+      ],
+      "latitude": -6.2088,
+      "longitude": 106.8456,
+      "utcOffsetMinutes": 420,
+      "minutes": [
+        272,
+        282,
+        357,
+        722,
+        913,
+        1085,
+        1155
+      ]
+    },
+    {
+      "name": "Jayapura",
+      "date": [
+        2026,
+        6,
+        21
+      ],
+      "latitude": -2.5337,
+      "longitude": 140.7181,
+      "utcOffsetMinutes": 540,
+      "minutes": [
+        248,
+        258,
+        340,
+        701,
+        905,
+        1060,
+        1135
+      ]
+    },
+    {
+      "name": "Makkah",
+      "date": [
+        2026,
+        1,
+        15
+      ],
+      "latitude": 21.4225,
+      "longitude": 39.8262,
+      "utcOffsetMinutes": 180,
+      "minutes": [
+        326,
+        336,
+        421,
+        752,
+        940,
+        1081,
+        1159
+      ]
+    },
+    {
+      "name": "Makassar leap",
+      "date": [
+        2024,
+        2,
+        29
+      ],
+      "latitude": -5.1477,
+      "longitude": 119.4327,
+      "utcOffsetMinutes": 480,
+      "minutes": [
+        283,
+        293,
+        369,
+        737,
+        923,
+        1103,
+        1173
+      ]
+    }
+  ]
+}

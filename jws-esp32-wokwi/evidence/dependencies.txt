@@ -1,0 +1,12 @@
+Resolving sim dependencies...
+Platform espressif32 @ 6.10.0 (required: espressif32 @ 6.10.0)
+├── framework-arduinoespressif32 @ 3.20017.241212+sha.dcc1105b (required: platformio/framework-arduinoespressif32 @ ~3.20017.0)
+├── tool-esptoolpy @ 1.40501.0 (required: platformio/tool-esptoolpy @ ~1.40501.0)
+└── toolchain-xtensa-esp32 @ 8.4.0+2021r2-patch5 (required: espressif/toolchain-xtensa-esp32 @ 8.4.0+2021r2-patch5)
+
+Libraries
+├── Adafruit BusIO @ 1.17.0 (required: adafruit/Adafruit BusIO @ 1.17.0)
+├── Adafruit GFX Library @ 1.11.11 (required: adafruit/Adafruit GFX Library @ 1.11.11)
+│   └── Adafruit BusIO @ 1.17.4 (required: Adafruit BusIO)
+└── Adafruit SSD1306 @ 2.5.13 (required: adafruit/Adafruit SSD1306 @ 2.5.13)
+│   └── Adafruit GFX Library @ 1.13.0 (required: Adafruit GFX Library)
