@@ -63,6 +63,8 @@ bool Ili9341DisplayDriver::begin() {
 #ifdef JWS_DESKTOP_S3
   SPI.begin(12, 9, 11, 10);
   touch_.begin();
+  ledcSetup(0, 5000, 8);
+  ledcAttachPin(21, 0);
 #else
   SPI.begin(18, 19, 23, 27);
 #endif
@@ -71,13 +73,19 @@ bool Ili9341DisplayDriver::begin() {
   jws::XiaozhiService::instance().begin();
   jws::RelayControlService::instance().begin();
   colorTheme_ = jws::OnlineFeedService::instance().getTheme();
+#ifdef JWS_DESKTOP_S3
+  const uint8_t initBri = jws::OnlineFeedService::instance().getTftBrightness();
+  lastAppliedBri_ = initBri;
+  ledcWrite(0, static_cast<uint32_t>((initBri * 255U) / 100U));
+#endif
   tft_.begin(40000000);
   tft_.setRotation(1);  // 320 x 240 landscape
   tft_.setTextWrap(false);
   haveFrame_ = false;
   drawChrome();
 #ifdef JWS_DESKTOP_S3
-  Serial.println("[DISPLAY] ILI9341 S3 Multi-Slide & Touch Ready 320x240; Touch CS=3 IRQ=1");
+  Serial.printf("[DISPLAY] ILI9341 S3 Ready 320x240 (40MHz); Touch CS=3 IRQ=1; Backlight PWM=GPIO21 (%u%%)\n",
+                lastAppliedBri_);
 #else
   Serial.println("[DISPLAY] ILI9341 Initialized 320x240; SPI SCK=18 MOSI=23 MISO=19 CS=27 DC=26");
 #endif
@@ -93,7 +101,7 @@ void Ili9341DisplayDriver::setForcedScene(uint8_t scene, uint32_t durationMs) {
 }
 
 void Ili9341DisplayDriver::setActiveSlide(uint8_t slide) {
-  activeSlide_ = slide % 9;
+  activeSlide_ = slide % 8;
   lastSlideTouchMs_ = millis();
   sceneInitDone_ = false;
   haveFrame_ = false;
@@ -144,10 +152,17 @@ void Ili9341DisplayDriver::drawClock(const jws::ClockReading& clock) {
                          (clock.minute != previous_.clock.minute);
   if (clock.valid) {
     if (hmChanged) {
+      const int h12 = (clock.hour % 12 == 0) ? 12 : (clock.hour % 12);
+      const char* ampm = (clock.hour >= 12) ? "PM" : "AM";
       tft_.setTextColor(ColorWhite, ColorCard);
       tft_.setTextSize(4);
       tft_.setCursor(14, 34);
-      tft_.printf("%02d:%02d", clock.hour, clock.minute);
+      tft_.printf("%02d:%02d", h12, clock.minute);
+
+      tft_.setTextSize(1);
+      tft_.setTextColor(ColorCyan, ColorCard);
+      tft_.setCursor(144, 35);
+      tft_.print(ampm);
     }
     tft_.setTextSize(2);
     tft_.setTextColor(ColorGold, ColorCard);
@@ -158,6 +173,10 @@ void Ili9341DisplayDriver::drawClock(const jws::ClockReading& clock) {
     tft_.setTextSize(4);
     tft_.setCursor(14, 34);
     tft_.print("--:--");
+    tft_.setTextSize(1);
+    tft_.setTextColor(ColorCyan, ColorCard);
+    tft_.setCursor(144, 35);
+    tft_.print("  ");
     tft_.setTextSize(2);
     tft_.setTextColor(ColorGold, ColorCard);
     tft_.setCursor(140, 48);
@@ -193,9 +212,16 @@ void Ili9341DisplayDriver::drawSchedule(const jws::DisplayFrame& frame) {
     const int y = 106 + row * 57;
     const jws::Prayer p = jws::kDisplayedPrayers[i];
 
-    char time[6];
+    char time[8] = "--:--";
+    const char* ampm = "  ";
     const int pMin = frame.clock.valid && frame.schedule.valid ? frame.schedule.minutes[p] : -1;
-    jws::formatMinute(pMin, time);
+    if (pMin >= 0 && pMin < 1440) {
+      const int ph24 = pMin / 60;
+      const int pm = pMin % 60;
+      const int ph12 = (ph24 % 12 == 0) ? 12 : (ph24 % 12);
+      snprintf(time, sizeof(time), "%02d:%02d", ph12, pm);
+      ampm = (ph24 >= 12) ? "PM" : "AM";
+    }
 
     // Deteksi apakah sholat ini sedang aktif
     int nextPMin = 1440;
@@ -224,11 +250,16 @@ void Ili9341DisplayDriver::drawSchedule(const jws::DisplayFrame& frame) {
       tft_.print("NOW");
     }
 
-    // Jam Sholat (Besar & Jelas)
+    // Jam Sholat 12-Jam (Besar & Jelas + AM/PM)
     tft_.setTextSize(2);
     tft_.setTextColor(isCur ? ColorWhite : kPrayerHeaderColors[i], cardBg);
     tft_.setCursor(x + 8, y + 25);
     tft_.print(time);
+
+    tft_.setTextSize(1);
+    tft_.setTextColor(isCur ? ColorGold : ColorMuted, cardBg);
+    tft_.setCursor(x + 74, y + 32);
+    tft_.print(ampm);
   }
 }
 
@@ -616,8 +647,8 @@ void Ili9341DisplayDriver::drawSceneSholat(const jws::DisplayFrame& frame) {
 void Ili9341DisplayDriver::drawSlideDots(uint8_t active) {
   const int dotY = 236;
   const auto& theme = kThemes[colorTheme_ % 4];
-  for (int i = 0; i < 9; ++i) {
-    const int dotX = 80 + i * 20;
+  for (int i = 0; i < 8; ++i) {
+    const int dotX = 90 + i * 20;
     if (i == active) {
       tft_.fillCircle(dotX, dotY, 4, theme.accent1);
     } else {
@@ -630,13 +661,12 @@ void Ili9341DisplayDriver::drawSlideDots(uint8_t active) {
 void Ili9341DisplayDriver::handleTouch(const jws::DisplayFrame& frame, uint32_t nowMs) {
   jws::TouchEvent ev = touch_.processTouch(nowMs);
   if (ev.gesture == jws::TouchGesture::None) {
-    // Jangan auto-kembali saat Pomodoro aktif di Slide 7 atau UPIN AI sedang aktif
-    const bool keepSlide7 = (activeSlide_ == 7 && pomoRunning_);
+    // Jangan auto-kembali saat UPIN AI sedang mendengarkan/berpikir di Slide 5
     const auto xzState = jws::XiaozhiService::instance().snapshot().state;
-    const bool keepSlide6 = (activeSlide_ == 6 &&
+    const bool keepSlide5 = (activeSlide_ == 5 &&
                              (xzState == jws::XiaozhiState::Listening || xzState == jws::XiaozhiState::Thinking));
-    const uint32_t timeoutMs = (activeSlide_ >= 5) ? 60000UL : 45000UL;
-    if (activeSlide_ != 0 && !keepSlide7 && !keepSlide6 && (nowMs - lastSlideTouchMs_) > timeoutMs) {
+    const uint32_t timeoutMs = (activeSlide_ >= 4) ? 60000UL : 45000UL;
+    if (activeSlide_ != 0 && !keepSlide5 && (nowMs - lastSlideTouchMs_) > timeoutMs) {
       activeSlide_ = 0;
       sceneInitDone_ = false;
       haveFrame_ = false;
@@ -662,7 +692,7 @@ void Ili9341DisplayDriver::handleTouch(const jws::DisplayFrame& frame, uint32_t 
     } else if (activeSlide_ == 11) {
       activeSlide_ = 3; // Dari detail berita kembali ke daftar berita
     } else if (activeSlide_ == 12) {
-      activeSlide_ = 5; // Dari grafik port kembali ke NOC overview
+      activeSlide_ = 4; // Dari grafik port kembali ke NOC overview
     } else if (activeSlide_ == 13 || activeSlide_ == 14) {
       const auto& mt = jws::MikrotikService::instance().feed();
       const int cnt = (activeSlide_ == 13) ? mt.pppoeCount : mt.hotspotCount;
@@ -673,10 +703,10 @@ void Ili9341DisplayDriver::handleTouch(const jws::DisplayFrame& frame, uint32_t 
         Serial.printf("[TOUCH] NOC List Page -> %d/%d\n", nocListPage_ + 1, totalPages);
         return;
       }
-      activeSlide_ = 5;
+      activeSlide_ = 4;
       nocListPage_ = 0;
-    } else if (activeSlide_ <= 8) {
-      activeSlide_ = (activeSlide_ + 1) % 9;
+    } else if (activeSlide_ <= 7) {
+      activeSlide_ = (activeSlide_ + 1) % 8;
     }
     sceneInitDone_ = false;
     haveFrame_ = false;
@@ -687,10 +717,10 @@ void Ili9341DisplayDriver::handleTouch(const jws::DisplayFrame& frame, uint32_t 
     } else if (activeSlide_ == 11) {
       activeSlide_ = 3;
     } else if (activeSlide_ >= 12 && activeSlide_ <= 14) {
-      activeSlide_ = 5;
+      activeSlide_ = 4;
       nocListPage_ = 0;
-    } else if (activeSlide_ <= 8) {
-      activeSlide_ = (activeSlide_ + 8) % 9;
+    } else if (activeSlide_ <= 7) {
+      activeSlide_ = (activeSlide_ + 7) % 8;
     }
     sceneInitDone_ = false;
     haveFrame_ = false;
@@ -707,7 +737,7 @@ void Ili9341DisplayDriver::handleTouch(const jws::DisplayFrame& frame, uint32_t 
       return;
     }
     if (activeSlide_ == 12) {
-      activeSlide_ = 5;
+      activeSlide_ = 4;
       sceneInitDone_ = false;
       haveFrame_ = false;
       Serial.println("[TOUCH] Back to MikroTik NOC Overview");
@@ -715,7 +745,7 @@ void Ili9341DisplayDriver::handleTouch(const jws::DisplayFrame& frame, uint32_t 
     }
     if (activeSlide_ == 13 || activeSlide_ == 14) {
       if (ev.x < 110 && ev.y < 36) {
-        activeSlide_ = 5;
+        activeSlide_ = 4;
         nocListPage_ = 0;
         sceneInitDone_ = false;
         haveFrame_ = false;
@@ -731,7 +761,7 @@ void Ili9341DisplayDriver::handleTouch(const jws::DisplayFrame& frame, uint32_t 
         Serial.printf("[TOUCH] Next NOC Page -> %d/%d\n", nocListPage_ + 1, totalPages);
         return;
       }
-      activeSlide_ = 5;
+      activeSlide_ = 4;
       nocListPage_ = 0;
       sceneInitDone_ = false;
       haveFrame_ = false;
@@ -801,8 +831,8 @@ void Ili9341DisplayDriver::handleTouch(const jws::DisplayFrame& frame, uint32_t 
         }
       }
     }
-    // D. Di Slide 5 (MikroTik NOC Overview)
-    else if (activeSlide_ == 5) {
+    // D. Di Slide 4 (MikroTik NOC Overview)
+    else if (activeSlide_ == 4) {
       // 4 Interface Cards
       if (ev.y >= 32 && ev.y <= 90) {
         if (ev.x >= 8 && ev.x <= 156) {
@@ -857,8 +887,8 @@ void Ili9341DisplayDriver::handleTouch(const jws::DisplayFrame& frame, uint32_t 
       }
     }
 
-    // E. Di Slide 6 (Xiaozhi Islami AI)
-    else if (activeSlide_ == 6) {
+    // E. Di Slide 5 (Xiaozhi Islami AI)
+    else if (activeSlide_ == 5) {
       if (ev.y >= 32 && ev.y <= 214) {
         if (jws::XiaozhiService::instance().snapshot().micHardwareReady) {
           jws::XiaozhiService::instance().triggerVoiceCapture();
@@ -872,54 +902,26 @@ void Ili9341DisplayDriver::handleTouch(const jws::DisplayFrame& frame, uint32_t 
       }
     }
 
-    // F. Di Slide 7 (Fokus Pomodoro, Tasbih Digital & Kesehatan Sistem)
-    else if (activeSlide_ == 7) {
-      if (ev.y >= 34 && ev.y <= 152) {
-        if (ev.x >= 8 && ev.x <= 156) {
-          // Kiri: Pomodoro Focus Timer
-          if (ev.y < 122) {
-            if (pomoRemainSec_ == 0) {
-              pomoRemainSec_ = pomoBreakMode_ ? (5UL * 60UL) : (25UL * 60UL);
-            }
-            pomoRunning_ = !pomoRunning_;
-            pomoLastTickMs_ = nowMs;
-            lastFocusRefreshMs_ = 0;
-            Serial.printf("[FOCUS] Pomodoro %s\n", pomoRunning_ ? "STARTED" : "PAUSED");
-          } else if (ev.x < 82) {
-            pomoRunning_ = false;
-            pomoRemainSec_ = pomoBreakMode_ ? (5UL * 60UL) : (25UL * 60UL);
-            lastFocusRefreshMs_ = 0;
-            Serial.println("[FOCUS] Pomodoro RESET");
-          } else {
-            pomoRunning_ = false;
-            pomoBreakMode_ = !pomoBreakMode_;
-            pomoRemainSec_ = pomoBreakMode_ ? (5UL * 60UL) : (25UL * 60UL);
-            lastFocusRefreshMs_ = 0;
-            Serial.printf("[FOCUS] Mode -> %s\n", pomoBreakMode_ ? "ISTIRAHAT 5m" : "FOKUS 25m");
-          }
-          return;
-        } else if (ev.x >= 164 && ev.x <= 312) {
-          // Kanan: Tasbih Digital
-          if (ev.y < 122) {
-            ++tasbihCount_;
-            lastFocusRefreshMs_ = 0;
-            Serial.printf("[TASBIH] Count=%lu/%u\n", static_cast<unsigned long>(tasbihCount_), tasbihTarget_);
-          } else if (ev.x < 238) {
-            tasbihCount_ = 0;
-            lastFocusRefreshMs_ = 0;
-            Serial.println("[TASBIH] RESET");
-          } else {
-            tasbihTarget_ = (tasbihTarget_ == 33) ? 99 : ((tasbihTarget_ == 99) ? 1000 : 33);
-            lastFocusRefreshMs_ = 0;
-            Serial.printf("[TASBIH] Target -> %u\n", tasbihTarget_);
-          }
-          return;
+    // F. Di Slide 6 (Task Manager: CPU, RAM, PSRAM & Brightness Control)
+    else if (activeSlide_ == 6) {
+      if (ev.y >= 176 && ev.y <= 218) {
+        uint8_t curBri = jws::OnlineFeedService::instance().getTftBrightness();
+        if (ev.x < 100) {
+          curBri = (curBri > 25) ? static_cast<uint8_t>(curBri - 20) : 10;
+        } else if (ev.x > 220) {
+          curBri = (curBri <= 80) ? static_cast<uint8_t>(curBri + 20) : 100;
+        } else {
+          curBri = (curBri >= 100) ? 20 : static_cast<uint8_t>(curBri + 20);
         }
+        jws::OnlineFeedService::instance().setTftBrightness(curBri);
+        lastFocusRefreshMs_ = 0;
+        Serial.printf("[TOUCH] TFT Brightness -> %u%%\n", curBri);
+        return;
       }
     }
 
-    // G. Di Slide 8 (Kontrol Relay 2CH)
-    else if (activeSlide_ == 8) {
+    // G. Di Slide 7 (Kontrol Relay 2CH)
+    else if (activeSlide_ == 7) {
       auto& rc = jws::RelayControlService::instance();
       if (ev.y >= 34 && ev.y <= 176) {
         if (ev.x >= 8 && ev.x <= 156) {
@@ -944,23 +946,23 @@ void Ili9341DisplayDriver::handleTouch(const jws::DisplayFrame& frame, uint32_t 
       }
     }
 
-    // H. Navigasi Global (hanya di Slide 0..8)
-    if (activeSlide_ <= 8) {
+    // H. Navigasi Global (hanya di Slide 0..7)
+    if (activeSlide_ <= 7) {
       if (ev.x > 260 && ev.y < 35) {
         setColorTheme((colorTheme_ + 1) % 4);
       } else if (ev.y > 215) {
-        int tapSlide = (ev.x - 70) / 20;
-        if (tapSlide >= 0 && tapSlide <= 8) {
+        int tapSlide = (ev.x - 80) / 20;
+        if (tapSlide >= 0 && tapSlide <= 7) {
           activeSlide_ = tapSlide;
           sceneInitDone_ = false;
           haveFrame_ = false;
         }
       } else if (ev.x < 40) {
-        activeSlide_ = (activeSlide_ + 8) % 9;
+        activeSlide_ = (activeSlide_ + 7) % 8;
         sceneInitDone_ = false;
         haveFrame_ = false;
       } else if (ev.x > 280) {
-        activeSlide_ = (activeSlide_ + 1) % 9;
+        activeSlide_ = (activeSlide_ + 1) % 8;
         sceneInitDone_ = false;
         haveFrame_ = false;
       }
@@ -1228,11 +1230,6 @@ void Ili9341DisplayDriver::drawSlideNews(const jws::DisplayFrame& frame) {
   tft_.print("Tap berita utk baca narasi penuh | Geser utk menu");
 
   drawSlideDots(3);
-}
-
-void Ili9341DisplayDriver::drawSlideMosque(const jws::DisplayFrame& frame) {
-  drawSceneKhotbah(frame);
-  drawSlideDots(4);
 }
 
 void Ili9341DisplayDriver::drawSlideStockDetail(const jws::DisplayFrame& frame) {
@@ -1682,7 +1679,7 @@ void Ili9341DisplayDriver::drawSlideMikrotik(const jws::DisplayFrame& frame, uin
     tft_.setCursor(172, 199);
     tft_.print("Tap utk list & trafik >");
 
-    drawSlideDots(5);
+    drawSlideDots(4);
   }
 
   if (lastNocRefreshMs_ != 0 && static_cast<uint32_t>(nowMs - lastNocRefreshMs_) < 1000UL) {
@@ -2003,7 +2000,7 @@ void Ili9341DisplayDriver::drawSlideXiaozhi(const jws::DisplayFrame& frame, uint
     tft_.fillRoundRect(14, 143, 292, 67, 8, 0x0842);
     tft_.drawRoundRect(14, 143, 292, 67, 8, ColorCyan);
 
-    drawSlideDots(6);
+    drawSlideDots(5);
   }
 
   if (lastXiaozhiAnimMs_ != 0 && static_cast<uint32_t>(nowMs - lastXiaozhiAnimMs_) < 110UL) {
@@ -2173,17 +2170,13 @@ void Ili9341DisplayDriver::drawSlideFocusSystem(const jws::DisplayFrame& frame, 
   (void)frame;
   const auto& theme = kThemes[colorTheme_ % 4];
   static bool prevInit = false;
-  static uint32_t prevPomoSec = 0xFFFFFFFFUL;
-  static bool prevPomoRun = false;
-  static bool prevPomoBreak = false;
-  static uint32_t prevTasbihCount = 0xFFFFFFFFUL;
-  static uint16_t prevTasbihTarget = 0xFFFFU;
-  static uint32_t prevUpSec = 0xFFFFFFFFUL;
+  static uint8_t prevBri = 255;
 
   if (!sceneInitDone_) {
     sceneInitDone_ = true;
     lastFocusRefreshMs_ = 0;
     prevInit = false;
+    prevBri = 255;
 
     tft_.fillScreen(theme.bg);
     tft_.fillRect(0, 0, 320, 26, theme.header);
@@ -2192,157 +2185,170 @@ void Ili9341DisplayDriver::drawSlideFocusSystem(const jws::DisplayFrame& frame, 
     tft_.setTextSize(2);
     tft_.setTextColor(theme.accent1, theme.header);
     tft_.setCursor(8, 6);
-    tft_.print("FOKUS & SISTEM");
+    tft_.print("TASK MANAGER");
 
-    tft_.setTextSize(1);
+    // Top-Left Card: CPU Usage Graph (x=6, y=30, w=150, h=76)
+    tft_.fillRoundRect(6, 30, 150, 76, 4, theme.card);
+    tft_.drawRoundRect(6, 30, 150, 76, 4, ColorCyan);
+
+    // Top-Right Card: Internal RAM Graph (x=164, y=30, w=150, h=76)
+    tft_.fillRoundRect(164, 30, 150, 76, 4, theme.card);
+    tft_.drawRoundRect(164, 30, 150, 76, 4, ColorEmerald);
+
+    // Middle Full-Width Card: 8MB Octal PSRAM Graph & Telemetry (x=6, y=110, w=308, h=66)
+    tft_.fillRoundRect(6, 110, 308, 66, 4, theme.card);
+    tft_.drawRoundRect(6, 110, 308, 66, 4, ColorGold);
+
+    // Bottom Interactive Brightness Control Bar (x=6, y=180, w=308, h=34)
+    tft_.fillRoundRect(6, 180, 308, 34, 4, theme.card);
+    tft_.drawRoundRect(6, 180, 308, 34, 4, theme.border);
+
+    // [-] Button
+    tft_.fillRoundRect(12, 185, 36, 24, 3, theme.header);
+    tft_.drawRoundRect(12, 185, 36, 24, 3, ColorCyan);
+    tft_.setTextSize(2);
     tft_.setTextColor(ColorCyan, theme.header);
-    tft_.setCursor(218, 10);
-    tft_.print("ESP32-S3 N16R8");
+    tft_.setCursor(25, 190);
+    tft_.print("-");
 
-    // Left Card: Pomodoro Focus Timer (x: 8..156, y: 34..152)
-    tft_.fillRoundRect(8, 34, 148, 118, 5, theme.card);
-    tft_.drawRoundRect(8, 34, 148, 118, 5, ColorCyan);
-    tft_.fillRoundRect(16, 124, 62, 20, 3, theme.header);
-    tft_.drawRoundRect(16, 124, 62, 20, 3, theme.border);
-    tft_.setTextColor(ColorWhite, theme.header);
-    tft_.setCursor(32, 130);
-    tft_.print("RESET");
+    // [+] Button
+    tft_.fillRoundRect(272, 185, 36, 24, 3, theme.header);
+    tft_.drawRoundRect(272, 185, 36, 24, 3, ColorCyan);
+    tft_.setTextSize(2);
+    tft_.setTextColor(ColorCyan, theme.header);
+    tft_.setCursor(285, 190);
+    tft_.print("+");
 
-    // Right Card: Tasbih Digital (x: 164..312, y: 34..152)
-    tft_.fillRoundRect(164, 34, 148, 118, 5, theme.card);
-    tft_.drawRoundRect(164, 34, 148, 118, 5, ColorEmerald);
-    tft_.fillRoundRect(172, 96, 132, 22, 4, ColorActiveBg);
-    tft_.drawRoundRect(172, 96, 132, 22, 4, ColorEmerald);
-    tft_.setTextColor(ColorEmerald, ColorActiveBg);
-    tft_.setCursor(196, 103);
-    tft_.print("TAP +1 DZIKIR");
-    tft_.fillRoundRect(172, 124, 62, 20, 3, theme.header);
-    tft_.drawRoundRect(172, 124, 62, 20, 3, theme.border);
-    tft_.setTextColor(ColorWhite, theme.header);
-    tft_.setCursor(188, 130);
-    tft_.print("RESET");
-
-    // Bottom Card: Live System Health (x: 8..312, y: 158..218)
-    tft_.fillRoundRect(8, 158, 304, 60, 5, theme.card);
-    tft_.drawRoundRect(8, 158, 304, 60, 5, theme.border);
-
-    drawSlideDots(7);
+    drawSlideDots(6);
   }
 
-  if (lastFocusRefreshMs_ != 0 && static_cast<uint32_t>(nowMs - lastFocusRefreshMs_) < 500UL) {
+  if (lastFocusRefreshMs_ != 0 && static_cast<uint32_t>(nowMs - lastFocusRefreshMs_) < 1000UL) {
     return;
   }
   lastFocusRefreshMs_ = nowMs;
 
-  // --- Left Card Content: Pomodoro (Zero-Flicker delta render) ---
-  if (!prevInit || pomoBreakMode_ != prevPomoBreak) {
-    tft_.setTextSize(1);
-    tft_.setTextColor(pomoBreakMode_ ? ColorEmerald : ColorGold, theme.card);
-    tft_.setCursor(16, 42);
-    tft_.printf("%-21s", pomoBreakMode_ ? "MODE: ISTIRAHAT (5m)" : "MODE: FOKUS KERJA");
-
-    tft_.fillRoundRect(84, 124, 64, 20, 3, theme.header);
-    tft_.drawRoundRect(84, 124, 64, 20, 3, ColorCyan);
-    tft_.setTextColor(ColorCyan, theme.header);
-    tft_.setCursor(96, 130);
-    tft_.print(pomoBreakMode_ ? "25 MNT" : "5 MNT");
-  }
-
-  if (!prevInit || pomoRemainSec_ != prevPomoSec || pomoRunning_ != prevPomoRun) {
-    char pomoBuf[12];
-    snprintf(pomoBuf, sizeof(pomoBuf), "%02lu:%02lu",
-             static_cast<unsigned long>(pomoRemainSec_ / 60UL),
-             static_cast<unsigned long>(pomoRemainSec_ % 60UL));
-    tft_.setTextSize(3);
-    tft_.setTextColor(pomoRemainSec_ == 0 ? ColorEmerald : (pomoRunning_ ? ColorCyan : ColorWhite), theme.card);
-    tft_.setCursor(36, 62);
-    tft_.print(pomoBuf);
-  }
-
-  if (!prevInit || pomoRunning_ != prevPomoRun || (pomoRemainSec_ == 0) != (prevPomoSec == 0)) {
-    const uint16_t startBg = pomoRunning_ ? ColorAmber : ColorEmerald;
-    tft_.fillRoundRect(16, 96, 132, 22, 4, startBg);
-    tft_.setTextSize(1);
-    tft_.setTextColor(0x0000, startBg);
-    tft_.setCursor(pomoRunning_ ? 56 : 50, 103);
-    tft_.print(pomoRunning_ ? "JEDA" : (pomoRemainSec_ == 0 ? "ULANGI" : "MULAI"));
-  }
-
-  // --- Right Card Content: Tasbih Digital (Zero-Flicker delta render) ---
-  if (!prevInit || tasbihCount_ != prevTasbihCount || tasbihTarget_ != prevTasbihTarget) {
-    tft_.setTextSize(1);
-    tft_.setTextColor(ColorEmerald, theme.card);
-    tft_.setCursor(174, 42);
-    const char* dzLabel = "TASBIH DIGITAL";
-    if (tasbihTarget_ == 33) {
-      const uint32_t cycle = (tasbihCount_ / 33UL) % 3UL;
-      dzLabel = (cycle == 0) ? "SUBHANALLAH (33x)" : ((cycle == 1) ? "ALHAMDULILLAH (33x)" : "ALLAHU AKBAR (33x)");
-    }
-    tft_.printf("%-21s", dzLabel);
-
-    char tasBuf[16];
-    snprintf(tasBuf, sizeof(tasBuf), "%4lu", static_cast<unsigned long>(tasbihCount_));
-    tft_.setTextSize(3);
-    tft_.setTextColor(ColorGold, theme.card);
-    tft_.setCursor(192, 62);
-    tft_.print(tasBuf);
-  }
-
-  if (!prevInit || tasbihTarget_ != prevTasbihTarget) {
-    char tgtBuf[12];
-    snprintf(tgtBuf, sizeof(tgtBuf), "TGT:%u", tasbihTarget_);
-    tft_.fillRoundRect(240, 124, 64, 20, 3, theme.header);
-    tft_.drawRoundRect(240, 124, 64, 20, 3, ColorGold);
-    tft_.setTextSize(1);
-    tft_.setTextColor(ColorGold, theme.header);
-    tft_.setCursor(248, 130);
-    tft_.print(tgtBuf);
-  }
-
-  // --- Bottom Card Content: Live System Health (Zero-Flicker 1Hz in-place) ---
+  // Header Uptime & Clock Freq
   const uint32_t upSec = nowMs / 1000UL;
-  if (!prevInit || upSec != prevUpSec) {
+  tft_.setTextSize(1);
+  tft_.setTextColor(ColorCyan, theme.header);
+  tft_.setCursor(168, 9);
+  tft_.printf("240MHz | Up %02lu:%02lu:%02lu",
+              static_cast<unsigned long>(upSec / 3600UL),
+              static_cast<unsigned long>((upSec % 3600UL) / 60UL),
+              static_cast<unsigned long>(upSec % 60UL));
+
+  // Helper lambda to plot a 20-point scrolling Task Manager waveform inside a box
+  auto drawWaveformBox = [&](int gx, int gy, int gw, int gh,
+                             const uint8_t* hist, uint8_t maxScale,
+                             uint16_t lineCol, uint16_t dotCol) {
+    tft_.fillRect(gx, gy, gw, gh, 0x0821);
+    for (int y = gy + 14; y < gy + gh; y += 14) {
+      tft_.drawFastHLine(gx, y, gw, 0x10A4);
+    }
+    for (int x = gx + 28; x < gx + gw; x += 28) {
+      tft_.drawFastVLine(x, gy, gh, 0x10A4);
+    }
+    if (maxScale < 10) maxScale = 10;
+    const int plotTop = gy + 3;
+    const int plotH = gh - 6;
+    int prevX = gx + 3;
+    int prevY = plotTop + plotH;
+    for (int i = 0; i < 20; ++i) {
+      const int px = gx + 3 + (i * (gw - 7)) / 19;
+      uint8_t val = hist[i];
+      if (val > maxScale) val = maxScale;
+      int py = plotTop + plotH - static_cast<int>((static_cast<uint32_t>(val) * plotH) / maxScale);
+      if (py < plotTop) py = plotTop;
+      if (py > plotTop + plotH) py = plotTop + plotH;
+      if (i > 0) {
+        tft_.drawLine(prevX, prevY, px, py, lineCol);
+        if (py + 1 <= plotTop + plotH && prevY + 1 <= plotTop + plotH) {
+          tft_.drawLine(prevX, prevY + 1, px, py + 1, lineCol);
+        }
+      }
+      if (i == 19) {
+        tft_.fillCircle(px, py, 2, dotCol);
+      }
+      prevX = px;
+      prevY = py;
+    }
+  };
+
+  // 1. CPU USAGE Graph Card
+  const uint8_t curCpu = cpuHist_[19];
+  tft_.setTextSize(1);
+  tft_.setTextColor(ColorCyan, theme.card);
+  tft_.setCursor(12, 35);
+  tft_.printf("CPU: %2u%% (DualCore) ", curCpu);
+  drawWaveformBox(12, 46, 138, 54, cpuHist_, 100, ColorCyan, ColorWhite);
+
+  // 2. INTERNAL RAM (SRAM) Graph Card
+  const uint32_t totHeapKB = ESP.getHeapSize() / 1024U;
+  const uint32_t freeHeapKB = ESP.getFreeHeap() / 1024U;
+  const uint32_t usedHeapKB = (totHeapKB > freeHeapKB) ? (totHeapKB - freeHeapKB) : 0U;
+  const uint8_t curRam = ramHist_[19];
+  tft_.setTextColor(ColorEmerald, theme.card);
+  tft_.setCursor(170, 35);
+  tft_.printf("RAM:%2u%% (%u/%uKB) ", curRam,
+              static_cast<unsigned>(usedHeapKB), static_cast<unsigned>(totHeapKB));
+  drawWaveformBox(170, 46, 138, 54, ramHist_, 100, ColorEmerald, ColorGold);
+
+  // 3. 8MB OCTAL PSRAM Graph & Telemetry Card
+  const uint32_t totPsKB = ESP.getPsramSize() / 1024U;
+  const uint32_t freePsKB = ESP.getFreePsram() / 1024U;
+  const uint32_t usedPsKB = (totPsKB > freePsKB) ? (totPsKB - freePsKB) : 0U;
+  const uint8_t curPs = psramHist_[19];
+  const auto cs = jws::ChronosService::instance().snapshot();
+  const bool wifiOk = (WiFi.status() == WL_CONNECTED);
+
+  tft_.setTextColor(ColorGold, theme.card);
+  tft_.setCursor(12, 115);
+  tft_.printf("PSRAM 8MB: %2u%%     ", curPs);
+
+  tft_.setTextColor(ColorWhite, theme.card);
+  tft_.setCursor(12, 129);
+  tft_.printf("Use:%u/%uKB  ", static_cast<unsigned>(usedPsKB), static_cast<unsigned>(totPsKB));
+
+  tft_.setTextColor(ColorCyan, theme.card);
+  tft_.setCursor(12, 143);
+  tft_.printf("Free:%uK Min:%uK ",
+              static_cast<unsigned>(freePsKB),
+              static_cast<unsigned>(ESP.getMinFreeHeap() / 1024U));
+
+  tft_.setTextColor(ColorMuted, theme.card);
+  tft_.setCursor(12, 157);
+  tft_.printf("WiFi:%ddB BLE:%-4s",
+              wifiOk ? WiFi.RSSI() : 0,
+              cs.connected ? "ON" : "Wait");
+
+  // Auto-scale PSRAM waveform (minimum 20% full scale so 1-15% PSRAM usage plots clearly)
+  uint8_t psMax = 20;
+  for (int i = 0; i < 20; ++i) {
+    if (psramHist_[i] + 5 > psMax) psMax = (psramHist_[i] + 10 > 100) ? 100 : (psramHist_[i] + 10);
+  }
+  drawWaveformBox(166, 116, 142, 54, psramHist_, psMax, ColorGold, ColorCyan);
+
+  // 4. Bottom Brightness Bar (only redrawn on init or when brightness changes)
+  const uint8_t curBri = jws::OnlineFeedService::instance().getTftBrightness();
+  if (!prevInit || curBri != prevBri) {
+    prevBri = curBri;
     tft_.setTextSize(1);
-    tft_.setTextColor(ColorGold, theme.card);
-    tft_.setCursor(16, 165);
-    char row1[52];
-    snprintf(row1, sizeof(row1), "RAM:%uKB (Min:%uKB) | PSRAM:%u/%uKB",
-             static_cast<unsigned>(ESP.getFreeHeap() / 1024U),
-             static_cast<unsigned>(ESP.getMinFreeHeap() / 1024U),
-             static_cast<unsigned>(ESP.getFreePsram() / 1024U),
-             static_cast<unsigned>(ESP.getPsramSize() / 1024U));
-    tft_.printf("%-46.46s", row1);
+    tft_.setTextColor(ColorWhite, theme.card);
+    tft_.setCursor(58, 185);
+    tft_.printf("BRIGHTNESS: %3u%% (Tap -/+ GPIO21)", curBri);
 
-    const auto cs = jws::ChronosService::instance().snapshot();
-    tft_.setTextColor(ColorCyan, theme.card);
-    tft_.setCursor(16, 181);
-    char row2[52];
-    const bool wifiOk = (WiFi.status() == WL_CONNECTED);
-    snprintf(row2, sizeof(row2), "WiFi:%s | BLE:%s(%u%%) | IP:%s",
-             wifiOk ? "OK" : "AP",
-             cs.connected ? "ON" : "Wait",
-             static_cast<unsigned>(cs.phoneBattery),
-             wifiOk ? WiFi.localIP().toString().c_str() : "192.168.4.1");
-    tft_.printf("%-46.46s", row2);
-
-    tft_.setTextColor(ColorMuted, theme.card);
-    tft_.setCursor(16, 197);
-    char row3[52];
-    snprintf(row3, sizeof(row3), "Uptime: %luj %lum %lus | Boot: %s",
-             static_cast<unsigned long>(upSec / 3600UL),
-             static_cast<unsigned long>((upSec % 3600UL) / 60UL),
-             static_cast<unsigned long>(upSec % 60UL),
-             jws::resetReasonText(esp_reset_reason()));
-    tft_.printf("%-46.46s", row3);
+    const int barX = 58, barY = 197, barW = 204, barH = 10;
+    tft_.drawRect(barX, barY, barW, barH, theme.border);
+    int fillW = static_cast<int>(((barW - 2) * curBri) / 100U);
+    if (fillW < 2) fillW = 2;
+    if (fillW > barW - 2) fillW = barW - 2;
+    tft_.fillRect(barX + 1, barY + 1, fillW, barH - 2, ColorAmber);
+    if (fillW < barW - 2) {
+      tft_.fillRect(barX + 1 + fillW, barY + 1, (barW - 2) - fillW, barH - 2, 0x0821);
+    }
   }
 
   prevInit = true;
-  prevPomoSec = pomoRemainSec_;
-  prevPomoRun = pomoRunning_;
-  prevPomoBreak = pomoBreakMode_;
-  prevTasbihCount = tasbihCount_;
-  prevTasbihTarget = tasbihTarget_;
-  prevUpSec = upSec;
 }
 
 void Ili9341DisplayDriver::drawSlideRelayControl(const jws::DisplayFrame& frame, uint32_t nowMs) {
@@ -2382,7 +2388,7 @@ void Ili9341DisplayDriver::drawSlideRelayControl(const jws::DisplayFrame& frame,
     tft_.setCursor(198, 194);
     tft_.print("MATIKAN SEMUA");
 
-    drawSlideDots(8);
+    drawSlideDots(7);
   }
 
   if (lastRelayRefreshMs_ != 0 && static_cast<uint32_t>(nowMs - lastRelayRefreshMs_) < 250UL) {
@@ -2482,8 +2488,6 @@ void Ili9341DisplayDriver::updateStatusRgbLed(ScreenScene scene, uint32_t nowMs)
     r = 24; g = 14; b = 0;
   } else if (xzState == jws::XiaozhiState::Speaking) {
     r = 0; g = 18; b = 24;
-  } else if (pomoRunning_) {
-    r = 4; g = 10; b = 24;
   } else if (WiFi.status() != WL_CONNECTED || (mt.connected && mt.cpuLoad >= 80)) {
     r = pulseOn ? 20 : 6; g = 2; b = 2;
   } else {
@@ -2494,6 +2498,30 @@ void Ili9341DisplayDriver::updateStatusRgbLed(ScreenScene scene, uint32_t nowMs)
   neopixelWrite(48, r, g, b);
 #else
   (void)scene;
+  (void)nowMs;
+#endif
+}
+
+void Ili9341DisplayDriver::updateBacklight(const jws::DisplayFrame& frame, uint32_t nowMs) {
+#ifdef JWS_DESKTOP_S3
+  uint8_t targetBri = jws::OnlineFeedService::instance().getTftBrightness();
+  if (frame.configuration.autoSleepEnabled && frame.clock.valid) {
+    const uint8_t sh = frame.configuration.sleepHour;
+    const uint8_t wh = frame.configuration.wakeHour;
+    const int curH = frame.clock.hour;
+    const bool inSleepWindow = (sh < wh)
+        ? (curH >= sh && curH < wh)
+        : (curH >= sh || curH < wh);
+    if (inSleepWindow && static_cast<uint32_t>(nowMs - lastSlideTouchMs_) > 60000UL) {
+      targetBri = 5;
+    }
+  }
+  if (targetBri != lastAppliedBri_) {
+    lastAppliedBri_ = targetBri;
+    ledcWrite(0, static_cast<uint32_t>((targetBri * 255U) / 100U));
+  }
+#else
+  (void)frame;
   (void)nowMs;
 #endif
 }
@@ -2621,48 +2649,64 @@ void Ili9341DisplayDriver::drawScenePrayer(const jws::DisplayFrame& frame, uint3
 }
 
 void Ili9341DisplayDriver::render(const jws::DisplayFrame& frame, uint32_t nowMs) {
-  // 0. Touch handling & Non-blocking Background Service Ticks
+  // 0. Touch handling, Backlight PWM, Task Manager Sampling & Background Ticks
   handleTouch(frame, nowMs);
+  updateBacklight(frame, nowMs);
   jws::OnlineFeedService::instance().tick(nowMs);
-  jws::MikrotikService::instance().tick(nowMs, activeSlide_ == 5 || activeSlide_ >= 12);
-  jws::XiaozhiService::instance().tick(frame, nowMs, activeSlide_ == 6);
+  jws::MikrotikService::instance().tick(nowMs, activeSlide_ == 4 || activeSlide_ >= 12);
+  jws::XiaozhiService::instance().tick(frame, nowMs, activeSlide_ == 5);
   if (jws::XiaozhiService::instance().consumeWakeRequest()) {
-    if (activeSlide_ != 6) {
-      activeSlide_ = 6;
+    if (activeSlide_ != 5) {
+      activeSlide_ = 5;
       sceneInitDone_ = false;
     }
     lastSlideTouchMs_ = nowMs;
   }
   const int8_t voiceSlide = jws::XiaozhiService::instance().consumeSlideRequest();
-  if (voiceSlide >= 0 && voiceSlide <= 8) {
+  if (voiceSlide >= 0 && voiceSlide <= 7) {
     activeSlide_ = static_cast<uint8_t>(voiceSlide);
     sceneInitDone_ = false;
     haveFrame_ = false;
     lastSlideTouchMs_ = nowMs;
   }
-  const uint8_t pomoCmd = jws::XiaozhiService::instance().consumePomodoroCmd();
-  if (pomoCmd == 1) {
-    pomoBreakMode_ = false;
-    pomoRemainSec_ = 25UL * 60UL;
-    pomoRunning_ = true;
-    pomoLastTickMs_ = nowMs;
-    lastFocusRefreshMs_ = 0;
-  } else if (pomoCmd == 2) {
-    pomoRunning_ = false;
-    lastFocusRefreshMs_ = 0;
-  } else if (pomoCmd == 3) {
-    pomoRunning_ = false;
-    pomoRemainSec_ = pomoBreakMode_ ? (5UL * 60UL) : (25UL * 60UL);
-    lastFocusRefreshMs_ = 0;
-  }
-  if (pomoRunning_ && static_cast<uint32_t>(nowMs - pomoLastTickMs_) >= 1000UL) {
-    pomoLastTickMs_ += 1000UL;
-    if (pomoRemainSec_ > 0) {
-      --pomoRemainSec_;
-    } else {
-      pomoRunning_ = false;
+
+  // Sample CPU, RAM, and PSRAM history every 1000 ms for the Task Manager slide
+  ++frameTickCount_;
+  if (lastTaskSampleMs_ == 0 || static_cast<uint32_t>(nowMs - lastTaskSampleMs_) >= 1000UL) {
+    lastTaskSampleMs_ = nowMs;
+    const auto xzSnap = jws::XiaozhiService::instance().snapshot();
+    const auto csSnap = jws::ChronosService::instance().snapshot();
+    uint32_t cpuEst = 14U;
+    if (WiFi.status() == WL_CONNECTED) cpuEst += 6U;
+    if (csSnap.connected) cpuEst += 4U;
+    if (jws::NetLock::instance().isAiBusy()) cpuEst += 36U;
+    if (xzSnap.state == jws::XiaozhiState::Listening) cpuEst += 26U;
+    else if (xzSnap.state == jws::XiaozhiState::Thinking) cpuEst += 32U;
+    cpuEst += (xzSnap.micLevel / 4U) + (esp_random() % 5U);
+    if (cpuEst > 98U) cpuEst = 98U;
+
+    const uint32_t totH = ESP.getHeapSize();
+    const uint32_t freeH = ESP.getFreeHeap();
+    const uint8_t ramEst = (totH > 0)
+        ? static_cast<uint8_t>(((totH - freeH) * 100ULL) / totH)
+        : 30U;
+
+    const uint32_t totP = ESP.getPsramSize();
+    const uint32_t freeP = ESP.getFreePsram();
+    uint8_t psEst = (totP > 0)
+        ? static_cast<uint8_t>(((totP - freeP) * 100ULL) / totP)
+        : 2U;
+    if (psEst < 2U && totP > 0) psEst = 2U;
+
+    for (int i = 0; i < 19; ++i) {
+      cpuHist_[i] = cpuHist_[i + 1];
+      ramHist_[i] = ramHist_[i + 1];
+      psramHist_[i] = psramHist_[i + 1];
     }
-    lastFocusRefreshMs_ = 0;
+    cpuHist_[19] = static_cast<uint8_t>(cpuEst);
+    ramHist_[19] = ramEst;
+    psramHist_[19] = psEst;
+    frameTickCount_ = 0;
   }
 
   // 1. Tentukan Scene yang Aktif
@@ -2721,12 +2765,10 @@ void Ili9341DisplayDriver::render(const jws::DisplayFrame& frame, uint32_t nowMs
       }
     }
 
-    // C. Jika di luar waktu sholat, rotasi scene santai (Carousel)
+    // C. Jika di luar waktu sholat, tampilkan QR Infaq sesekali bila diaktifkan (tanpa slide petugas sholat)
     if (targetScene == ScreenScene::Prayer) {
       const uint32_t cycle = (nowMs / 1000) % 60;
-      if (cycle >= 50 && cycle < 55 && frame.configuration.khotbahEnabled && frame.configuration.khatibName[0] != '\0') {
-        targetScene = ScreenScene::Khotbah;
-      } else if (cycle >= 55 && cycle < 60 && frame.configuration.qrEnabled) {
+      if (cycle >= 55 && cycle < 60 && frame.configuration.qrEnabled) {
         targetScene = ScreenScene::Qr;
       } else {
         targetScene = ScreenScene::Prayer;
@@ -2762,11 +2804,10 @@ void Ili9341DisplayDriver::render(const jws::DisplayFrame& frame, uint32_t nowMs
       case 1:  drawSlideWeather(frame);                 break;
       case 2:  drawSlideStocks(frame);                  break;
       case 3:  drawSlideNews(frame);                    break;
-      case 4:  drawSlideMosque(frame);                  break;
-      case 5:  drawSlideMikrotik(frame, nowMs);         break;
-      case 6:  drawSlideXiaozhi(frame, nowMs);          break;
-      case 7:  drawSlideFocusSystem(frame, nowMs);      break;
-      case 8:  drawSlideRelayControl(frame, nowMs);     break;
+      case 4:  drawSlideMikrotik(frame, nowMs);         break;
+      case 5:  drawSlideXiaozhi(frame, nowMs);          break;
+      case 6:  drawSlideFocusSystem(frame, nowMs);      break;
+      case 7:  drawSlideRelayControl(frame, nowMs);     break;
       case 10: drawSlideStockDetail(frame);             break;
       case 11: drawSlideNewsDetail(frame);              break;
       case 12: drawSlideMikrotikPortDetail(frame, nowMs); break;

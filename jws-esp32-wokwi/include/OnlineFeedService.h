@@ -81,6 +81,8 @@ class OnlineFeedService {
     prefs_.begin("jws_feed", false);
     theme_ = prefs_.getUChar("theme", 0);
     if (theme_ > 3) theme_ = 0;
+    tftBrightness_ = prefs_.getUChar("tft_bri", 80);
+    if (tftBrightness_ < 5 || tftBrightness_ > 100) tftBrightness_ = 80;
     
     String sym = prefs_.getString("stocks", "BBCA,BBRI,TLKM,ASII");
     if (sym.length() > 0) {
@@ -97,6 +99,14 @@ class OnlineFeedService {
   void setTheme(uint8_t t) {
     theme_ = (t > 3) ? 0 : t;
     prefs_.putUChar("theme", theme_);
+  }
+
+  uint8_t getTftBrightness() const { return tftBrightness_; }
+  void setTftBrightness(uint8_t b) {
+    if (b < 5) b = 5;
+    if (b > 100) b = 100;
+    tftBrightness_ = b;
+    prefs_.putUChar("tft_bri", tftBrightness_);
   }
 
   const WeatherFeed& weather() const { return weather_; }
@@ -127,6 +137,7 @@ class OnlineFeedService {
 
   Preferences prefs_;
   uint8_t theme_ = 0;
+  uint8_t tftBrightness_ = 80;
   WeatherFeed weather_{};
   StockFeed stocks_{};
   NewsFeed news_{};

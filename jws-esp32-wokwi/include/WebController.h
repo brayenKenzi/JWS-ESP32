@@ -50,6 +50,8 @@ class WebController {
     server_.on("/api/v1/slide", HTTP_POST, [this]() { handlePostSlide(); });
     server_.on("/api/v1/theme", HTTP_GET, [this]() { handleGetTheme(); });
     server_.on("/api/v1/theme", HTTP_POST, [this]() { handlePostTheme(); });
+    server_.on("/api/v1/brightness", HTTP_GET, [this]() { handleGetBrightness(); });
+    server_.on("/api/v1/brightness", HTTP_POST, [this]() { handlePostBrightness(); });
     server_.on("/api/v1/stocks", HTTP_GET, [this]() { handleGetStocks(); });
     server_.on("/api/v1/stocks", HTTP_POST, [this]() { handlePostStocks(); });
     server_.on("/api/v1/mikrotik", HTTP_GET, [this]() { handleGetMikrotik(); });
@@ -412,6 +414,7 @@ class WebController {
         return;
       }
       next.brightness = static_cast<uint8_t>(bri);
+      jws::OnlineFeedService::instance().setTftBrightness(next.brightness);
     }
     if (doc.containsKey("hijriOffsetDays")) {
       const int hOff = doc["hijriOffsetDays"].as<int>();
@@ -709,6 +712,42 @@ class WebController {
     server_.send(200, "application/json", "{\"success\":true,\"message\":\"Tema warna layar berhasil diubah.\"}");
   }
 
+  void handleGetBrightness() {
+    addSecurityHeaders();
+    StaticJsonDocument<128> doc;
+    doc["brightness"] = jws::OnlineFeedService::instance().getTftBrightness();
+    String out;
+    serializeJson(doc, out);
+    server_.send(200, "application/json", out);
+  }
+
+  void handlePostBrightness() {
+    addSecurityHeaders();
+    if (!verifyCsrf()) {
+      server_.send(403, "application/json", "{\"error\":\"Token sesi tidak valid\"}");
+      return;
+    }
+    if (!server_.hasArg("plain")) {
+      server_.send(400, "application/json", "{\"error\":\"Payload kosong\"}");
+      return;
+    }
+    StaticJsonDocument<128> doc;
+    if (deserializeJson(doc, server_.arg("plain"))) {
+      server_.send(400, "application/json", "{\"error\":\"Format JSON tidak valid\"}");
+      return;
+    }
+    int bri = doc["brightness"] | 80;
+    if (bri < 5) bri = 5;
+    if (bri > 100) bri = 100;
+    jws::OnlineFeedService::instance().setTftBrightness(static_cast<uint8_t>(bri));
+    jws::Configuration next = app_.configuration();
+    next.brightness = static_cast<uint8_t>(bri);
+    next.revision = next.revision + 1;
+    app_.applyConfiguration(next);
+    server_.send(200, "application/json",
+                 "{\"success\":true,\"message\":\"Kecerahan layar TFT (PWM GPIO 21) berhasil diubah!\"}");
+  }
+
   void handleGetStocks() {
     addSecurityHeaders();
     StaticJsonDocument<256> doc;
@@ -834,7 +873,7 @@ class WebController {
     }
 
     if (doc["recordVoice"] | false) {
-      app_.setSlide(6);
+      app_.setSlide(5);
       jws::XiaozhiService::instance().triggerVoiceCapture();
       server_.send(200, "application/json",
                    "{\"success\":true,\"message\":\"Merekam suara 3 detik dari mic INMP441 (cek layar TFT)...\"}");
@@ -844,7 +883,7 @@ class WebController {
     const char* question = doc["question"] | "";
     if (question && question[0] != '\0') {
       jws::XiaozhiService::instance().askQuestion(question);
-      app_.setSlide(6); // Pindah layar TFT ke Xiaozhi Islami AI
+      app_.setSlide(5); // Pindah layar TFT ke Xiaozhi Islami AI
       server_.send(200, "application/json",
                    "{\"success\":true,\"message\":\"Pertanyaan dikirim ke Xiaozhi AI (cek layar TFT)!\"}");
       return;

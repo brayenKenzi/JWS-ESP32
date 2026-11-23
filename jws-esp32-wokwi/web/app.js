@@ -131,9 +131,20 @@
 
   function formatMinute(m) {
     if (typeof m !== "number" || m < 0 || m >= 1440) return "--:--";
-    const hh = Math.floor(m / 60);
+    const hh24 = Math.floor(m / 60);
     const mm = m % 60;
-    return `${pad2(hh)}:${pad2(mm)}`;
+    const hh12 = (hh24 % 12 === 0) ? 12 : (hh24 % 12);
+    const ampm = hh24 >= 12 ? "PM" : "AM";
+    return `${pad2(hh12)}:${pad2(mm)} ${ampm}`;
+  }
+
+  function formatClock12(timeStr) {
+    const parts = (timeStr || "").split(":").map(Number);
+    if (parts.length !== 3 || parts.some(isNaN)) return timeStr || "--:--:--";
+    const hh24 = parts[0];
+    const hh12 = (hh24 % 12 === 0) ? 12 : (hh24 % 12);
+    const ampm = hh24 >= 12 ? "PM" : "AM";
+    return `${pad2(hh12)}:${pad2(parts[1])}:${pad2(parts[2])} ${ampm}`;
   }
 
   function julianDayFromDateStr(dateStr) {
@@ -800,7 +811,8 @@
     const dayUpper = getWeekdayUpper(state.clock.date);
     const dayTitle = dayUpper.charAt(0) + dayUpper.slice(1).toLowerCase();
 
-    document.getElementById("liveClockText").textContent = state.clock.time;
+    const clock12 = formatClock12(state.clock.time);
+    document.getElementById("liveClockText").textContent = clock12;
     document.getElementById("currentDateText").textContent = formatIndonesianDate(state.clock.date);
     document.getElementById("currentHijriText").textContent = hijriStr;
     document.getElementById("pasaranMoonText").textContent = `${dayUpper} ${pasaran.toUpperCase()} \u2022 ${moonPhase}`;
@@ -808,12 +820,12 @@
     const dayBadge = document.getElementById("nextPrayerDayBadge");
     if (dayBadge) dayBadge.textContent = `${dayUpper} ${pasaran.toUpperCase()}`;
 
-    document.getElementById("tftClock").textContent = state.clock.time;
+    document.getElementById("tftClock").textContent = clock12;
     document.getElementById("tftDate").textContent = `${dayTitle}, ${state.clock.date} \u2022 ${hijriStr}`;
     const tftDayCell = document.getElementById("tftCellVal-6");
     if (tftDayCell) tftDayCell.textContent = dayUpper;
 
-    document.getElementById("p5Clock").textContent = state.clock.time;
+    document.getElementById("p5Clock").textContent = clock12;
     document.getElementById("p5Date").textContent = state.clock.date;
     document.getElementById("p5DayName").textContent = dayUpper;
     const p5DayInline = document.getElementById("p5DayInline");
@@ -1170,6 +1182,38 @@
             showAlert(d.message || "Slide layar berhasil diubah.", "success");
           }).catch(() => {});
         }
+      });
+    });
+
+    function postLiveBrightness(briVal) {
+      const bri = Math.max(5, Math.min(100, Number(briVal) || 80));
+      state.draftConfig.brightness = bri;
+      state.savedConfig.brightness = bri;
+      const bInput = document.getElementById("brightnessInput");
+      const bVal = document.getElementById("brightnessValue");
+      if (bInput) bInput.value = String(bri);
+      if (bVal) bVal.textContent = `${bri}%`;
+      document.querySelectorAll(".bri-btn").forEach((b) => {
+        b.classList.toggle("active", parseInt(b.getAttribute("data-bri"), 10) === bri);
+      });
+      renderScheduleAndPreview();
+      if (state.connected) {
+        fetch("/api/v1/brightness", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-JWS-Token": state.csrfToken
+          },
+          body: JSON.stringify({ brightness: bri })
+        }).then(r => r.json()).then(d => {
+          showAlert(d.message || `Kecerahan layar diatur ke ${bri}%`, "success");
+        }).catch(() => {});
+      }
+    }
+
+    document.querySelectorAll(".bri-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        postLiveBrightness(parseInt(btn.getAttribute("data-bri"), 10) || 80);
       });
     });
 
@@ -1899,9 +1943,12 @@
     });
 
     document.getElementById("brightnessInput").addEventListener("input", (e) => {
-      state.draftConfig.brightness = Number(e.target.value) || 60;
+      state.draftConfig.brightness = Number(e.target.value) || 80;
       document.getElementById("brightnessValue").textContent = `${state.draftConfig.brightness}%`;
       renderScheduleAndPreview();
+    });
+    document.getElementById("brightnessInput").addEventListener("change", (e) => {
+      postLiveBrightness(Number(e.target.value) || 80);
     });
 
     document.getElementById("quickCalligraphyToggle").addEventListener("change", (e) => {

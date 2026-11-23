@@ -55,9 +55,10 @@ class Ili9341DisplayDriver final : public jws::DisplayDriver {
   int16_t scrollX_ = 320;
   uint32_t lastScrollMs_ = 0;
 
-  // Multi-Slide & Theme State
-  uint8_t activeSlide_ = 0; // 0=JWS, 1=Weather, 2=Stocks, 3=News, 4=Mosque, 5=MikrotikNoc, 6=XiaozhiAI, 7=Focus&System
-                            // Sub-menus: 10=StockDetail, 11=NewsDetail, 12=PortDetail, 13=PPPoE, 14=Hotspot
+  // Multi-Slide & Theme State (8 Main Slides: 0..7)
+  // 0=JWS, 1=Weather, 2=Stocks, 3=News, 4=MikrotikNoc, 5=XiaozhiAI, 6=TaskManager, 7=RelayControl
+  // Sub-menus: 10=StockDetail, 11=NewsDetail, 12=PortDetail, 13=PPPoE, 14=Hotspot
+  uint8_t activeSlide_ = 0;
   uint8_t lastRenderedSlide_ = 0;
   uint8_t colorTheme_ = 0;  // 0=Midnight Gold, 1=Emerald Mosque, 2=Royal Sapphire, 3=Cyber Sunset
   uint32_t lastSlideTouchMs_ = 0;
@@ -69,13 +70,13 @@ class Ili9341DisplayDriver final : public jws::DisplayDriver {
   uint32_t lastXiaozhiAnimMs_ = 0;
   uint32_t lastLocalIp_ = 0xFFFFFFFFU;
 
-  // Slide 7: Daily Productivity (Pomodoro Focus Timer + Digital Tasbih + System Health)
-  bool pomoRunning_ = false;
-  bool pomoBreakMode_ = false;
-  uint32_t pomoRemainSec_ = 25UL * 60UL;
-  uint32_t pomoLastTickMs_ = 0;
-  uint32_t tasbihCount_ = 0;
-  uint16_t tasbihTarget_ = 33;
+  // Slide 6: Task Manager (CPU, Internal RAM, Octal PSRAM Live Graphs + Brightness)
+  uint8_t cpuHist_[20] = {0};
+  uint8_t ramHist_[20] = {0};
+  uint8_t psramHist_[20] = {0};
+  uint32_t lastTaskSampleMs_ = 0;
+  uint32_t frameTickCount_ = 0;
+  uint8_t lastAppliedBri_ = 0;
   uint32_t lastFocusRefreshMs_ = 0;
   uint32_t lastRelayRefreshMs_ = 0;
   uint32_t lastRgbLedMs_ = 0;
@@ -83,11 +84,11 @@ class Ili9341DisplayDriver final : public jws::DisplayDriver {
 
   void handleTouch(const jws::DisplayFrame& frame, uint32_t nowMs);
   void updateStatusRgbLed(ScreenScene scene, uint32_t nowMs);
+  void updateBacklight(const jws::DisplayFrame& frame, uint32_t nowMs);
   bool drawChronosAlertOverlay(uint32_t nowMs);
   void drawSlideWeather(const jws::DisplayFrame& frame);
   void drawSlideStocks(const jws::DisplayFrame& frame);
   void drawSlideNews(const jws::DisplayFrame& frame);
-  void drawSlideMosque(const jws::DisplayFrame& frame);
   void drawSlideStockDetail(const jws::DisplayFrame& frame);
   void drawSlideNewsDetail(const jws::DisplayFrame& frame);
   void drawSlideMikrotik(const jws::DisplayFrame& frame, uint32_t nowMs);

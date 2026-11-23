@@ -692,16 +692,27 @@ class XiaozhiService {
     }
   }
 
+  static void formatMin12(int totalMin, char* out, size_t cap) {
+    if (totalMin < 0 || totalMin >= 1440) {
+      snprintf(out, cap, "--:--");
+      return;
+    }
+    const int h24 = totalMin / 60;
+    const int m = totalMin % 60;
+    const int h12 = (h24 % 12 == 0) ? 12 : (h24 % 12);
+    snprintf(out, cap, "%02d:%02d%s", h12, m, (h24 >= 12) ? "PM" : "AM");
+  }
+
   static void updatePrayerBadge(const DisplayFrame& frame, char* out, size_t cap) {
-    char clockStr[8] = "--:--";
+    char clockStr[10] = "--:--";
     if (frame.clock.valid) {
-      snprintf(clockStr, sizeof(clockStr), "%02d:%02d", frame.clock.hour, frame.clock.minute);
+      formatMin12(frame.clock.hour * 60 + frame.clock.minute, clockStr, sizeof(clockStr));
     }
     if (frame.clock.valid && frame.schedule.valid) {
       NextPrayerInfo nxt = nextPrayerCountdown(frame.schedule, frame.clock.hour, frame.clock.minute, frame.clock.second);
       if (nxt.valid) {
-        char pTime[6];
-        formatMinute(nxt.targetMinute, pTime);
+        char pTime[10];
+        formatMin12(nxt.targetMinute, pTime, sizeof(pTime));
         snprintf(out, cap, "%s %s | %s", prayerName(nxt.prayer), pTime, clockStr);
         return;
       }
@@ -750,10 +761,9 @@ class XiaozhiService {
     if (!q || q[0] == '\0') return 0;
     if (strcasestr(q, "buka ") || strcasestr(q, "pindah ") || strcasestr(q, "tampilkan ")) {
       if (strcasestr(q, "mikrotik") || strcasestr(q, "cuaca") || strcasestr(q, "saham") ||
-          strcasestr(q, "berita") || strcasestr(q, "masjid") || strcasestr(q, "jadwal") ||
-          strcasestr(q, "jws") || strcasestr(q, "fokus") || strcasestr(q, "timer") ||
-          strcasestr(q, "tasbih") || strcasestr(q, "sistem") || strcasestr(q, "relay") ||
-          strcasestr(q, "saklar") || strcasestr(q, "lampu")) {
+          strcasestr(q, "berita") || strcasestr(q, "jadwal") || strcasestr(q, "jws") ||
+          strcasestr(q, "task manager") || strcasestr(q, "sistem") || strcasestr(q, "performa") ||
+          strcasestr(q, "relay") || strcasestr(q, "saklar") || strcasestr(q, "lampu")) {
         return 8;
       }
     }
@@ -770,13 +780,13 @@ class XiaozhiService {
         strcasestr(q, "bluetooth") || strcasestr(q, "baterai hp")) {
       return 11;
     }
-    if (strcasestr(q, "pomodoro") || strcasestr(q, "timer fokus") || strcasestr(q, "mulai fokus") ||
-        strcasestr(q, "jeda timer") || strcasestr(q, "stop timer") || strcasestr(q, "reset timer")) {
+    if (strcasestr(q, "brightness") || strcasestr(q, "kecerahan") ||
+        strcasestr(q, "redupkan") || strcasestr(q, "terangkan")) {
       return 9;
     }
     if (strcasestr(q, "cek sistem") || strcasestr(q, "cek memori") || strcasestr(q, "cek ram") ||
         strcasestr(q, "psram") || strcasestr(q, "uptime") || strcasestr(q, "sinyal wifi") ||
-        strcasestr(q, "status esp")) {
+        strcasestr(q, "status esp") || strcasestr(q, "task manager")) {
       return 6;
     }
     if (strcasestr(q, "dzikir") || strcasestr(q, "zikir") || strcasestr(q, "doa harian") ||
@@ -853,14 +863,13 @@ class XiaozhiService {
           if (strcasestr(customQuery, "cuaca")) { target = 1; targetName = "Cuaca Kotamobagu"; }
           else if (strcasestr(customQuery, "saham")) { target = 2; targetName = "Saham IDX"; }
           else if (strcasestr(customQuery, "berita")) { target = 3; targetName = "Berita CNBC"; }
-          else if (strcasestr(customQuery, "masjid")) { target = 4; targetName = "Info Masjid"; }
-          else if (strcasestr(customQuery, "mikrotik")) { target = 5; targetName = "MikroTik NOC"; }
-          else if (strcasestr(customQuery, "fokus") || strcasestr(customQuery, "timer") ||
-                   strcasestr(customQuery, "tasbih") || strcasestr(customQuery, "sistem")) {
-            target = 7; targetName = "Fokus & Sistem";
+          else if (strcasestr(customQuery, "mikrotik")) { target = 4; targetName = "MikroTik NOC"; }
+          else if (strcasestr(customQuery, "task manager") || strcasestr(customQuery, "performa") ||
+                   strcasestr(customQuery, "sistem")) {
+            target = 6; targetName = "Task Manager S3";
           } else if (strcasestr(customQuery, "relay") || strcasestr(customQuery, "saklar") ||
                      strcasestr(customQuery, "lampu")) {
-            target = 8; targetName = "Kontrol Relay 2CH";
+            target = 7; targetName = "Kontrol Relay 2CH";
           }
         }
         pendingSlideRequest_.store(target, std::memory_order_release);
@@ -937,18 +946,23 @@ class XiaozhiService {
         break;
       }
       case 9: {
-        copySafe(qBuf, sizeof(qBuf), customQuery ? customQuery : "Timer Fokus Pomodoro");
-        if (customQuery && (strcasestr(customQuery, "stop") || strcasestr(customQuery, "jeda"))) {
-          pendingPomodoroCmd_.store(2, std::memory_order_release);
-          snprintf(ansBuf, sizeof(ansBuf), "Timer fokus dijeda. Tap layar Fokus & Sistem untuk lanjut.");
-        } else if (customQuery && strcasestr(customQuery, "reset")) {
-          pendingPomodoroCmd_.store(3, std::memory_order_release);
-          snprintf(ansBuf, sizeof(ansBuf), "Timer fokus sudah di-reset ke 25:00 menit.");
-        } else {
-          pendingPomodoroCmd_.store(1, std::memory_order_release);
-          pendingSlideRequest_.store(7, std::memory_order_release);
-          snprintf(ansBuf, sizeof(ansBuf), "Timer Fokus 25 menit dimulai! Bismillah, selamat bekerja kawan!");
+        copySafe(qBuf, sizeof(qBuf), customQuery ? customQuery : "Kontrol Kecerahan Layar");
+        uint8_t curBri = OnlineFeedService::instance().getTftBrightness();
+        if (customQuery && strcasestr(customQuery, "redup")) {
+          curBri = (curBri > 25) ? static_cast<uint8_t>(curBri - 20) : 10;
+        } else if (customQuery && strcasestr(customQuery, "terang")) {
+          curBri = (curBri <= 80) ? static_cast<uint8_t>(curBri + 20) : 100;
+        } else if (customQuery) {
+          for (const char* p = customQuery; *p; ++p) {
+            if (*p >= '0' && *p <= '9') {
+              int v = atoi(p);
+              if (v >= 5 && v <= 100) curBri = static_cast<uint8_t>(v);
+              break;
+            }
+          }
         }
+        OnlineFeedService::instance().setTftBrightness(curBri);
+        snprintf(ansBuf, sizeof(ansBuf), "Kecerahan layar TFT diatur ke %u%% (PWM GPIO 21).", curBri);
         break;
       }
       case 1: {
@@ -1012,8 +1026,8 @@ class XiaozhiService {
             else if (strcasestr(customQuery, "isya")) queryPrayer = Isya;
           }
           if (queryPrayer != PrayerCount && frameCopy.schedule.minutes[queryPrayer] >= 0) {
-            char pTime[6];
-            formatMinute(frameCopy.schedule.minutes[queryPrayer], pTime);
+            char pTime[10];
+            formatMin12(frameCopy.schedule.minutes[queryPrayer], pTime, sizeof(pTime));
             snprintf(ansBuf, sizeof(ansBuf),
                      "Untuk Kota Kotamobagu, waktu %s jatuh pada pukul %s WITA.",
                      prayerName(queryPrayer), pTime);
@@ -1021,8 +1035,8 @@ class XiaozhiService {
             NextPrayerInfo nxt = nextPrayerCountdown(
                 frameCopy.schedule, frameCopy.clock.hour, frameCopy.clock.minute, frameCopy.clock.second);
             if (nxt.valid) {
-              char pTime[6];
-              formatMinute(nxt.targetMinute, pTime);
+              char pTime[10];
+              formatMin12(nxt.targetMinute, pTime, sizeof(pTime));
               const int remHrs = static_cast<int>(nxt.secondsRemaining / 3600);
               const int remMins = static_cast<int>((nxt.secondsRemaining % 3600) / 60);
               snprintf(ansBuf, sizeof(ansBuf),

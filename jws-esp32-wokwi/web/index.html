@@ -86,12 +86,11 @@
           </label>
         </div>
 
-        <!-- Pemilih Scene ala Twinkle: JWS Utama, Iqomah, Petugas Jumat, QRIS -->
+        <!-- Pemilih Scene ala Twinkle: JWS Utama, Iqomah, QRIS -->
         <div class="scene-bar" role="group" aria-label="Pilih Scene Tampilan">
           <span class="scene-label">SCENE:</span>
-          <button type="button" class="scene-btn active" data-scene="prayer">JWS 6 Waktu</button>
+          <button type="button" class="scene-btn active" data-scene="prayer">JWS 6 Waktu (12h)</button>
           <button type="button" class="scene-btn" data-scene="iqomah">Hitung Mundur Iqomah</button>
-          <button type="button" class="scene-btn" data-scene="khotbah">Petugas Jumat</button>
           <button type="button" class="scene-btn" data-scene="qr">QR Code / QRIS</button>
         </div>
 
@@ -211,17 +210,26 @@
           </div>
         </div>
         <div class="remote-block">
-          <span class="remote-label">Remote Slide TFT</span>
+          <span class="remote-label">Remote Slide TFT (8 Slide)</span>
           <div class="slide-buttons" role="group" aria-label="Pindah Slide Layar">
-            <button type="button" class="btn btn-sm slide-btn" data-slide="0">🕌 1. JWS</button>
+            <button type="button" class="btn btn-sm slide-btn" data-slide="0">🕌 1. JWS (12h)</button>
             <button type="button" class="btn btn-sm slide-btn" data-slide="1">⛅ 2. Cuaca</button>
             <button type="button" class="btn btn-sm slide-btn" data-slide="2">📈 3. Saham</button>
             <button type="button" class="btn btn-sm slide-btn" data-slide="3">📰 4. Berita</button>
-            <button type="button" class="btn btn-sm slide-btn" data-slide="4">💳 5. Masjid</button>
-            <button type="button" class="btn btn-sm slide-btn" data-slide="5">🖧 6. MikroTik</button>
-            <button type="button" class="btn btn-sm slide-btn" data-slide="6">🤖 7. Upin AI</button>
-            <button type="button" class="btn btn-sm slide-btn" data-slide="7">⏱️ 8. Fokus &amp; Sistem</button>
-            <button type="button" class="btn btn-sm slide-btn" data-slide="8">⚡ 9. Kontrol Relay</button>
+            <button type="button" class="btn btn-sm slide-btn" data-slide="4">🖧 5. MikroTik</button>
+            <button type="button" class="btn btn-sm slide-btn" data-slide="5">🤖 6. Upin AI</button>
+            <button type="button" class="btn btn-sm slide-btn" data-slide="6">📊 7. Task Manager</button>
+            <button type="button" class="btn btn-sm slide-btn" data-slide="7">⚡ 8. Kontrol Relay</button>
+          </div>
+        </div>
+        <div class="remote-block">
+          <span class="remote-label">Brightness TFT (Pin LED &rarr; GPIO 21)</span>
+          <div class="slide-buttons" role="group" aria-label="Kecerahan Layar TFT">
+            <button type="button" class="btn btn-sm bri-btn" data-bri="20">🔅 20%</button>
+            <button type="button" class="btn btn-sm bri-btn" data-bri="40">🔉 40%</button>
+            <button type="button" class="btn btn-sm bri-btn" data-bri="60">🔆 60%</button>
+            <button type="button" class="btn btn-sm bri-btn" data-bri="80">☀️ 80%</button>
+            <button type="button" class="btn btn-sm bri-btn" data-bri="100">✨ 100%</button>
           </div>
         </div>
       </div>
@@ -301,38 +309,20 @@
             </div>
           </section>
 
-          <section class="card" aria-label="Petugas Sholat Jumat dan QRIS">
+          <section class="card" aria-label="QR Code dan QRIS Infaq">
             <div class="card-header">
               <div>
-                <span class="eyebrow">SCENE KHOTBAH JUMAT &amp; QRIS INFAQ</span>
-                <h2>Petugas Sholat Jumat &amp; QR Code</h2>
+                <span class="eyebrow">SCENE QRIS INFAQ &amp; TAUTAN DIGITAL</span>
+                <h2>QR Code / QRIS Masjid</h2>
               </div>
             </div>
 
-            <div class="form-group">
-              <div class="switch-row">
-                <label for="khotbahEnabledInput">Aktifkan Scene Petugas Sholat Jumat (Khotbah)</label>
-                <input type="checkbox" id="khotbahEnabledInput" checked>
-              </div>
-            </div>
-
-            <div class="sub-grid-2">
-              <div class="form-group">
-                <label for="khatibInput">Nama Khatib Jumat</label>
-                <input type="text" id="khatibInput" maxlength="32" placeholder="Ust. H. Ahmad Fauzi">
-              </div>
-              <div class="form-group">
-                <label for="imamInput">Nama Imam</label>
-                <input type="text" id="imamInput" maxlength="32" placeholder="Ust. Abdurrahman">
-              </div>
-              <div class="form-group">
-                <label for="muadzinInput">Nama Muadzin</label>
-                <input type="text" id="muadzinInput" maxlength="32" placeholder="Sdr. Rizky Pratama">
-              </div>
-              <div class="form-group">
-                <label for="bilalInput">Nama Bilal</label>
-                <input type="text" id="bilalInput" maxlength="32" placeholder="Sdr. Hidayatullah">
-              </div>
+            <div style="display:none;">
+              <input type="checkbox" id="khotbahEnabledInput">
+              <input type="text" id="khatibInput" maxlength="32">
+              <input type="text" id="imamInput" maxlength="32">
+              <input type="text" id="muadzinInput" maxlength="32">
+              <input type="text" id="bilalInput" maxlength="32">
             </div>
 
             <div class="form-group">
@@ -393,9 +383,9 @@
 
             <div class="form-group">
               <label for="brightnessInput">
-                Kecerahan Panel P5 (Brightness): <strong id="brightnessValue">60%</strong>
+                Kecerahan Layar TFT (GPIO 21) &amp; Panel: <strong id="brightnessValue">80%</strong>
               </label>
-              <input type="range" id="brightnessInput" min="5" max="100" step="5" value="60">
+              <input type="range" id="brightnessInput" min="5" max="100" step="5" value="80">
             </div>
 
             <div class="form-group">
