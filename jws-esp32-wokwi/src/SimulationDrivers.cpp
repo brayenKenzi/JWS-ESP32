@@ -73,9 +73,10 @@ bool Ili9341DisplayDriver::begin() {
   jws::XiaozhiService::instance().begin();
   jws::RelayControlService::instance().begin();
   colorTheme_ = jws::OnlineFeedService::instance().getTheme();
-#ifdef JWS_DESKTOP_S3
   const uint8_t initBri = jws::OnlineFeedService::instance().getTftBrightness();
   lastAppliedBri_ = initBri;
+  tft_.setBrightnessPct(initBri);
+#ifdef JWS_DESKTOP_S3
   ledcWrite(0, static_cast<uint32_t>((initBri * 255U) / 100U));
 #endif
   tft_.begin(40000000);
@@ -84,7 +85,7 @@ bool Ili9341DisplayDriver::begin() {
   haveFrame_ = false;
   drawChrome();
 #ifdef JWS_DESKTOP_S3
-  Serial.printf("[DISPLAY] ILI9341 S3 Ready 320x240 (40MHz); Touch CS=3 IRQ=1; Backlight PWM=GPIO21 (%u%%)\n",
+  Serial.printf("[DISPLAY] ILI9341 S3 Ready 320x240 (40MHz); Touch CS=3 IRQ=1; Software+PWM Brightness=%u%%\n",
                 lastAppliedBri_);
 #else
   Serial.println("[DISPLAY] ILI9341 Initialized 320x240; SPI SCK=18 MOSI=23 MISO=19 CS=27 DC=26");
@@ -2335,7 +2336,7 @@ void Ili9341DisplayDriver::drawSlideFocusSystem(const jws::DisplayFrame& frame, 
     tft_.setTextSize(1);
     tft_.setTextColor(ColorWhite, theme.card);
     tft_.setCursor(58, 185);
-    tft_.printf("BRIGHTNESS: %3u%% (Tap -/+ GPIO21)", curBri);
+    tft_.printf("BRIGHTNESS LAYAR: %3u%% (Tap - / +)", curBri);
 
     const int barX = 58, barY = 197, barW = 204, barH = 10;
     tft_.drawRect(barX, barY, barW, barH, theme.border);
@@ -2503,7 +2504,6 @@ void Ili9341DisplayDriver::updateStatusRgbLed(ScreenScene scene, uint32_t nowMs)
 }
 
 void Ili9341DisplayDriver::updateBacklight(const jws::DisplayFrame& frame, uint32_t nowMs) {
-#ifdef JWS_DESKTOP_S3
   uint8_t targetBri = jws::OnlineFeedService::instance().getTftBrightness();
   if (frame.configuration.autoSleepEnabled && frame.clock.valid) {
     const uint8_t sh = frame.configuration.sleepHour;
@@ -2513,17 +2513,22 @@ void Ili9341DisplayDriver::updateBacklight(const jws::DisplayFrame& frame, uint3
         ? (curH >= sh && curH < wh)
         : (curH >= sh || curH < wh);
     if (inSleepWindow && static_cast<uint32_t>(nowMs - lastSlideTouchMs_) > 60000UL) {
-      targetBri = 5;
+      targetBri = 10;
     }
   }
   if (targetBri != lastAppliedBri_) {
     lastAppliedBri_ = targetBri;
+    tft_.setBrightnessPct(targetBri);
+#ifdef JWS_DESKTOP_S3
     ledcWrite(0, static_cast<uint32_t>((targetBri * 255U) / 100U));
-  }
-#else
-  (void)frame;
-  (void)nowMs;
 #endif
+    // Trigger immediate redraw of the active slide/scene at the new software brightness!
+    sceneInitDone_ = false;
+    haveFrame_ = false;
+    lastFocusRefreshMs_ = 0;
+    lastRelayRefreshMs_ = 0;
+    lastNocRefreshMs_ = 0;
+  }
 }
 
 

@@ -21,6 +21,56 @@ enum class ScreenScene : uint8_t {
   Sholat = 5
 };
 
+// Subclass of Adafruit_ILI9341 that scales all RGB565 colors in software (5%..100%)
+// so TFT brightness dimming works directly on the screen without needing a GPIO backlight wire!
+class DimmableILI9341 final : public Adafruit_ILI9341 {
+ public:
+  using Adafruit_ILI9341::Adafruit_ILI9341;
+
+  void setBrightnessPct(uint8_t pct) {
+    if (pct < 5) pct = 5;
+    if (pct > 100) pct = 100;
+    briPct_ = pct;
+  }
+  uint8_t brightnessPct() const { return briPct_; }
+
+  uint16_t dimColor(uint16_t col) const {
+    if (briPct_ >= 100 || col == 0) return col;
+    const uint32_t r = (((col >> 11) & 0x1FU) * briPct_) / 100U;
+    const uint32_t g = (((col >> 5)  & 0x3FU) * briPct_) / 100U;
+    const uint32_t b = ((col         & 0x1FU) * briPct_) / 100U;
+    return static_cast<uint16_t>((r << 11) | (g << 5) | b);
+  }
+
+  void drawPixel(int16_t x, int16_t y, uint16_t color) override {
+    Adafruit_ILI9341::drawPixel(x, y, dimColor(color));
+  }
+  void writePixel(int16_t x, int16_t y, uint16_t color) override {
+    Adafruit_ILI9341::writePixel(x, y, dimColor(color));
+  }
+  void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) override {
+    Adafruit_ILI9341::fillRect(x, y, w, h, dimColor(color));
+  }
+  void writeFillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) override {
+    Adafruit_ILI9341::writeFillRect(x, y, w, h, dimColor(color));
+  }
+  void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color) override {
+    Adafruit_ILI9341::drawFastHLine(x, y, w, dimColor(color));
+  }
+  void writeFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color) override {
+    Adafruit_ILI9341::writeFastHLine(x, y, w, dimColor(color));
+  }
+  void drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color) override {
+    Adafruit_ILI9341::drawFastVLine(x, y, h, dimColor(color));
+  }
+  void writeFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color) override {
+    Adafruit_ILI9341::writeFastVLine(x, y, h, dimColor(color));
+  }
+
+ private:
+  uint8_t briPct_ = 80;
+};
+
 class Ili9341DisplayDriver final : public jws::DisplayDriver {
  public:
   bool begin() override;
@@ -34,11 +84,11 @@ class Ili9341DisplayDriver final : public jws::DisplayDriver {
  private:
 #ifdef JWS_DESKTOP_S3
   // ESP32-S3 SPI: SCK=12, MISO=9, MOSI=11, CS=10, DC=13, RST=14
-  Adafruit_ILI9341 tft_{&SPI, 13, 10, 14};
+  DimmableILI9341 tft_{&SPI, 13, 10, 14};
   jws::Xpt2046Touch touch_{3, 1}; // CS=3, IRQ=1
 #else
   // ESP32 VSPI: SCK=18, MISO=19, MOSI=23, CS=27, DC=26.
-  Adafruit_ILI9341 tft_{&SPI, 26, 27, -1};
+  DimmableILI9341 tft_{&SPI, 26, 27, -1};
   jws::Xpt2046Touch touch_{-1, -1};
 #endif
 
