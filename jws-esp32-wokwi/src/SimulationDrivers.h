@@ -11,6 +11,7 @@
 #include "XiaozhiService.h"
 #include "RelayControlService.h"
 #include "ChronosService.h"
+#include "AudioService.h"
 
 enum class ScreenScene : uint8_t {
   Prayer = 0,

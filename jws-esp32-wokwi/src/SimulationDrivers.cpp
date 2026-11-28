@@ -70,6 +70,7 @@ bool Ili9341DisplayDriver::begin() {
 #endif
   jws::OnlineFeedService::instance().begin();
   jws::MikrotikService::instance().begin();
+  jws::AudioService::instance().begin();
   jws::XiaozhiService::instance().begin();
   jws::RelayControlService::instance().begin();
   colorTheme_ = jws::OnlineFeedService::instance().getTheme();
@@ -403,6 +404,8 @@ void Ili9341DisplayDriver::drawSceneAdzan(const jws::DisplayFrame& frame, const 
     tft_.setTextColor(ColorWhite, 0x0821);
     tft_.setCursor(48, 205);
     tft_.print("Mari Menuju Kemenangan & Memakmurkan Masjid");
+
+    jws::AudioService::instance().playChime(jws::AudioChime::AdzanAlert);
   }
 
   if (remSec != lastRemSec_) {
@@ -456,6 +459,11 @@ void Ili9341DisplayDriver::drawSceneIqomah(const jws::DisplayFrame& frame, const
 
   if (remSec != lastRemSec_) {
     lastRemSec_ = remSec;
+    if (remSec > 1 && remSec <= 10) {
+      jws::AudioService::instance().playChime(jws::AudioChime::IqomahTick);
+    } else if (remSec == 1) {
+      jws::AudioService::instance().playChime(jws::AudioChime::IqomahFinal);
+    }
     char timeBuf[16];
     snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d", remSec / 60, remSec % 60);
     tft_.setTextSize(6);

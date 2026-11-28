@@ -23,6 +23,7 @@
 #include "NetLock.h"
 #include "RelayControlService.h"
 #include "ChronosService.h"
+#include "AudioService.h"
 
 namespace jws {
 
@@ -781,7 +782,9 @@ class XiaozhiService {
       return 11;
     }
     if (strcasestr(q, "brightness") || strcasestr(q, "kecerahan") ||
-        strcasestr(q, "redupkan") || strcasestr(q, "terangkan")) {
+        strcasestr(q, "redupkan") || strcasestr(q, "terangkan") ||
+        strcasestr(q, "volume") || strcasestr(q, "tes suara") ||
+        strcasestr(q, "besarkan suara") || strcasestr(q, "kecilkan suara")) {
       return 9;
     }
     if (strcasestr(q, "cek sistem") || strcasestr(q, "cek memori") || strcasestr(q, "cek ram") ||
@@ -946,6 +949,27 @@ class XiaozhiService {
         break;
       }
       case 9: {
+        if (customQuery && (strcasestr(customQuery, "volume") || strcasestr(customQuery, "suara"))) {
+          copySafe(qBuf, sizeof(qBuf), customQuery);
+          uint8_t curVol = AudioService::instance().getVolume();
+          if (strcasestr(customQuery, "kecil") || strcasestr(customQuery, "turun") || strcasestr(customQuery, "pelan")) {
+            curVol = (curVol > 6) ? static_cast<uint8_t>(curVol - 6) : 3;
+          } else if (strcasestr(customQuery, "besar") || strcasestr(customQuery, "naik") || strcasestr(customQuery, "keras")) {
+            curVol = (curVol <= 24) ? static_cast<uint8_t>(curVol + 6) : 30;
+          } else {
+            for (const char* p = customQuery; *p; ++p) {
+              if (*p >= '0' && *p <= '9') {
+                int v = atoi(p);
+                if (v >= 0 && v <= 30) curVol = static_cast<uint8_t>(v);
+                else if (v > 30 && v <= 100) curVol = static_cast<uint8_t>((v * 30) / 100);
+                break;
+              }
+            }
+          }
+          AudioService::instance().setVolume(curVol);
+          snprintf(ansBuf, sizeof(ansBuf), "Halo kawan! Speaker MAX98357A siap, volume diatur ke %u dari 30. Betul betul betul!", curVol);
+          break;
+        }
         copySafe(qBuf, sizeof(qBuf), customQuery ? customQuery : "Kontrol Kecerahan Layar");
         uint8_t curBri = OnlineFeedService::instance().getTftBrightness();
         if (customQuery && strcasestr(customQuery, "redup")) {
@@ -962,7 +986,7 @@ class XiaozhiService {
           }
         }
         OnlineFeedService::instance().setTftBrightness(curBri);
-        snprintf(ansBuf, sizeof(ansBuf), "Kecerahan layar TFT diatur ke %u%% (PWM GPIO 21).", curBri);
+        snprintf(ansBuf, sizeof(ansBuf), "Kecerahan layar TFT diatur ke %u persen.", curBri);
         break;
       }
       case 1: {
@@ -1064,6 +1088,8 @@ class XiaozhiService {
     snap_.state = XiaozhiState::Speaking;
     stateChangedMs_ = millis();
     portEXIT_CRITICAL(&xzMux_);
+
+    AudioService::instance().speakText(ansBuf);
   }
 
   static void sanitizeForTft(String& s) {
@@ -1556,6 +1582,8 @@ class XiaozhiService {
     snap_.state = XiaozhiState::Speaking;
     stateChangedMs_ = millis();
     portEXIT_CRITICAL(&xzMux_);
+
+    AudioService::instance().speakText(replyText.c_str());
   }
 
   void replyWithWakePrompt(const char* voiceQuery, bool skipGemini = false) {
@@ -1834,7 +1862,8 @@ class XiaozhiService {
     portENTER_CRITICAL(&xzMux_);
     curStateBeforeRead = snap_.state;
     portEXIT_CRITICAL(&xzMux_);
-    const bool fillPreRoll = (preRollBuf_ != nullptr) &&
+    const bool spkPlaying = AudioService::instance().status().playing;
+    const bool fillPreRoll = (preRollBuf_ != nullptr) && !spkPlaying &&
                              (curStateBeforeRead == XiaozhiState::Idle || curStateBeforeRead == XiaozhiState::Speaking);
 
     if (micReady_) {
@@ -1951,8 +1980,8 @@ class XiaozhiService {
     }
     snap_.micLevel = curLevel;
 
-    // Human voice filter + responsive pre-roll wake trigger
-    const bool isHumanVoice = warmupDone && (curLevel >= 14) && (zcr >= 4) && (zcr <= 34);
+    // Human voice filter + responsive pre-roll wake trigger (suppressed while speaker is playing)
+    const bool isHumanVoice = warmupDone && !spkPlaying && (curLevel >= 14) && (zcr >= 4) && (zcr <= 34);
     if (micReady_) {
       if (st == XiaozhiState::Idle ||
           (st == XiaozhiState::Speaking && static_cast<uint32_t>(nowMs - stateChangedMs_) > 6000UL)) {

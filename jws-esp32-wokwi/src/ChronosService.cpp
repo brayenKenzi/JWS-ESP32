@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "ChronosService.h"
+#include "AudioService.h"
 #include <string.h>
 
 #ifdef JWS_DESKTOP_S3
@@ -221,6 +222,7 @@ void ChronosService::onNotification(const char* app, const char* title, const ch
 
   Serial.printf("[CHRONOS] Notif #%lu [%s] %s: %s\n",
                 static_cast<unsigned long>(snap_.notifCount), aBuf, tBuf, mBuf);
+  AudioService::instance().playChime(AudioChime::ChronosNotif);
 }
 
 void ChronosService::onRinger(const char* caller, bool state) {
@@ -237,6 +239,9 @@ void ChronosService::onRinger(const char* caller, bool state) {
   portEXIT_CRITICAL(&mux_);
 
   Serial.printf("[CHRONOS] Incoming Call %s: %s\n", state ? "RINGING" : "ENDED", cBuf);
+  if (state) {
+    AudioService::instance().playChime(AudioChime::ChronosRing);
+  }
 }
 
 void ChronosService::onConfigTimeSync() {

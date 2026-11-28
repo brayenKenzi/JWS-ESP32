@@ -11,6 +11,7 @@
 #include "RelayControlService.h"
 #include "SinricProService.h"
 #include "ChronosService.h"
+#include "AudioService.h"
 #include "DashboardAssets.h"
 #include <esp_system.h>
 #include <stdio.h>
@@ -64,6 +65,8 @@ class WebController {
     server_.on("/api/v1/sinric", HTTP_POST, [this]() { handlePostSinric(); });
     server_.on("/api/v1/chronos", HTTP_GET, [this]() { handleGetChronos(); });
     server_.on("/api/v1/chronos", HTTP_POST, [this]() { handlePostChronos(); });
+    server_.on("/api/v1/audio", HTTP_GET, [this]() { handleGetAudio(); });
+    server_.on("/api/v1/audio", HTTP_POST, [this]() { handlePostAudio(); });
     server_.on("/api/v1/system/reboot", HTTP_POST, [this]() { handlePostReboot(); });
     server_.onNotFound([this]() {
       addSecurityHeaders();
@@ -495,9 +498,11 @@ class WebController {
         return;
       }
       next.audioVolume = static_cast<uint8_t>(vol);
+      jws::AudioService::instance().setVolume(next.audioVolume);
     }
     if (doc.containsKey("buzzerEnabled") && doc["buzzerEnabled"].is<bool>()) {
       next.buzzerEnabled = doc["buzzerEnabled"].as<bool>();
+      jws::AudioService::instance().setEnabled(next.buzzerEnabled);
     }
     if (doc.containsKey("tarhimOffsetMinutes")) {
       const int toff = doc["tarhimOffsetMinutes"].as<int>();
@@ -1021,6 +1026,64 @@ class WebController {
       ch.capturePhoto();
     }
     handleGetChronos();
+  }
+
+  void handleGetAudio() {
+    addSecurityHeaders();
+    const auto st = jws::AudioService::instance().status();
+    StaticJsonDocument<256> doc;
+    doc["hardwareReady"] = st.hardwareReady;
+    doc["enabled"] = st.enabled;
+    doc["playing"] = st.playing;
+    doc["volume"] = st.volume;
+    doc["lastSpoken"] = st.lastSpoken;
+    String out;
+    serializeJson(doc, out);
+    server_.send(200, "application/json", out);
+  }
+
+  void handlePostAudio() {
+    addSecurityHeaders();
+    if (!verifyCsrf()) {
+      server_.send(403, "application/json", "{\"error\":\"Token sesi tidak valid\"}");
+      return;
+    }
+    if (!server_.hasArg("plain")) {
+      server_.send(400, "application/json", "{\"error\":\"Payload kosong\"}");
+      return;
+    }
+    StaticJsonDocument<384> doc;
+    if (deserializeJson(doc, server_.arg("plain"))) {
+      server_.send(400, "application/json", "{\"error\":\"Format JSON tidak valid\"}");
+      return;
+    }
+    auto& aud = jws::AudioService::instance();
+    if (doc.containsKey("enabled")) {
+      aud.setEnabled(doc["enabled"].as<bool>());
+    }
+    if (doc.containsKey("volume")) {
+      int v = doc["volume"] | 24;
+      if (v < 0) v = 0;
+      if (v > 30) v = 30;
+      aud.setVolume(static_cast<uint8_t>(v));
+    }
+    if (doc["stop"] | false) {
+      aud.stop();
+    }
+    if (doc.containsKey("chime")) {
+      const char* c = doc["chime"] | "";
+      if (strcmp(c, "adzan") == 0) aud.playChime(jws::AudioChime::AdzanAlert);
+      else if (strcmp(c, "iqomah") == 0) aud.playChime(jws::AudioChime::IqomahFinal);
+      else if (strcmp(c, "notif") == 0) aud.playChime(jws::AudioChime::ChronosNotif);
+      else aud.playChime(jws::AudioChime::BootWelcome);
+    }
+    if (doc.containsKey("speak")) {
+      const char* s = doc["speak"] | "";
+      if (s && s[0] != '\0') {
+        aud.speakText(s);
+      }
+    }
+    handleGetAudio();
   }
 
   void handlePostReboot() {

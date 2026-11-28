@@ -656,11 +656,11 @@
       <!-- SEKSI 5: SISTEM, AUDIO, HEMAT DAYA & WI-FI -->
       <div class="sec-panel" id="sec-system" data-section="system">
         <div class="sec-grid">
-          <section class="card" aria-label="Hemat Daya dan Audio DFPlayer">
+          <section class="card" aria-label="Hemat Daya dan Audio MAX98357A">
             <div class="card-header">
               <div>
-                <span class="eyebrow">OTOMASI DAYA MALAM &amp; AUDIO TARHIM</span>
-                <h2>Hemat Daya &amp; Audio Adzan</h2>
+                <span class="eyebrow">MAX98357A I2S1 (GPIO 40, 41, 42) &bull; AUTO-SLEEP MALAM</span>
+                <h2>Audio Speaker MAX98357A &amp; Hemat Daya</h2>
               </div>
             </div>
 
@@ -684,20 +684,26 @@
 
             <div class="form-group">
               <div class="switch-row">
-                <label for="buzzerEnabledInput">Bunyi Buzzer / Beep Saat Adzan &amp; Iqomah</label>
+                <label for="buzzerEnabledInput">Aktifkan Suara Speaker MAX98357A (UPIN TTS, Adzan &amp; Iqomah)</label>
                 <input type="checkbox" id="buzzerEnabledInput" checked>
               </div>
             </div>
 
             <div class="sub-grid-2">
               <div class="form-group">
-                <label for="audioVolumeInput">Volume Audio DFPlayer (0..30)</label>
-                <input type="number" id="audioVolumeInput" class="select-input" min="0" max="30" value="20">
+                <label for="audioVolumeInput">Volume Speaker MAX98357A (0..30)</label>
+                <input type="number" id="audioVolumeInput" class="select-input" min="0" max="30" value="24">
               </div>
               <div class="form-group">
                 <label for="tarhimOffsetInput">Putar Tarhim Sebelum Adzan (Mnt)</label>
                 <input type="number" id="tarhimOffsetInput" class="select-input" min="-15" max="0" value="-6">
               </div>
+            </div>
+
+            <div class="btn-row" style="flex-wrap:wrap;gap:8px;margin-top:6px;">
+              <button type="button" id="btnTestAudioChime" class="btn btn-sm btn-ghost">&#128276; Tes Nada Chime</button>
+              <button type="button" id="btnTestAudioAdzan" class="btn btn-sm btn-ghost">&#128332; Tes Melodi Adzan</button>
+              <button type="button" id="btnTestAudioTts" class="btn btn-sm btn-primary">&#128266; Tes Suara Bicara UPIN AI</button>
             </div>
           </section>
 

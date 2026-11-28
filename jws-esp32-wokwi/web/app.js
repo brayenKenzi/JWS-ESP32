@@ -2017,12 +2017,68 @@
     document.getElementById("buzzerEnabledInput").addEventListener("change", (e) => {
       state.draftConfig.buzzerEnabled = e.target.checked;
       renderScheduleAndPreview();
+      if (state.connected) {
+        fetch("/api/v1/audio", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-JWS-Token": state.csrfToken },
+          body: JSON.stringify({ enabled: e.target.checked })
+        }).catch(() => {});
+      }
     });
 
     document.getElementById("audioVolumeInput").addEventListener("input", (e) => {
       state.draftConfig.audioVolume = Math.max(0, Math.min(30, Number(e.target.value) || 0));
       renderScheduleAndPreview();
     });
+    document.getElementById("audioVolumeInput").addEventListener("change", (e) => {
+      const vol = Math.max(0, Math.min(30, Number(e.target.value) || 0));
+      if (state.connected) {
+        fetch("/api/v1/audio", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-JWS-Token": state.csrfToken },
+          body: JSON.stringify({ volume: vol })
+        }).then(() => showAlert(`Volume Speaker MAX98357A diatur ke ${vol}/30`, "success")).catch(() => {});
+      }
+    });
+
+    async function postAudioTest(payload, msg) {
+      if (!state.connected) {
+        showAlert("Perangkat JWS belum terhubung.", "error");
+        return;
+      }
+      try {
+        const res = await fetch("/api/v1/audio", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-JWS-Token": state.csrfToken },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok && msg) showAlert(msg, "success");
+      } catch (_) {
+        showAlert("Gagal mengirim perintah audio.", "error");
+      }
+    }
+
+    const btnTestAudioChime = document.getElementById("btnTestAudioChime");
+    const btnTestAudioAdzan = document.getElementById("btnTestAudioAdzan");
+    const btnTestAudioTts = document.getElementById("btnTestAudioTts");
+    if (btnTestAudioChime) {
+      btnTestAudioChime.addEventListener("click", () => {
+        postAudioTest({ chime: "boot" }, "Memutar nada chime di speaker MAX98357A!");
+      });
+    }
+    if (btnTestAudioAdzan) {
+      btnTestAudioAdzan.addEventListener("click", () => {
+        postAudioTest({ chime: "adzan" }, "Memutar melodi peringatan Adzan di speaker MAX98357A!");
+      });
+    }
+    if (btnTestAudioTts) {
+      btnTestAudioTts.addEventListener("click", () => {
+        postAudioTest(
+          { speak: "Assalamualaikum kawan! Speaker MAX 98357A dan asisten suara Upin sudah aktif. Betul betul betul!" },
+          "Memutar suara bicara UPIN AI (TTS Bahasa Indonesia) di speaker MAX98357A!"
+        );
+      });
+    }
 
     document.getElementById("tarhimOffsetInput").addEventListener("input", (e) => {
       state.draftConfig.tarhimOffsetMinutes = Math.max(-15, Math.min(0, Number(e.target.value) || 0));
