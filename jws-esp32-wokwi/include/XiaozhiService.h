@@ -66,6 +66,7 @@ class XiaozhiService {
       prefs_.putString("api_key", "");
       prefs_.putBool("gemini_off_v1", true);
     }
+    aiTlsClient_.setInsecure();
     String key = prefs_.getString("api_key", "");
     String baseUrl = prefs_.getString("api_base", "");
     String modelId = prefs_.getString("api_model", "");
@@ -294,6 +295,7 @@ class XiaozhiService {
   Preferences prefs_;
   TaskHandle_t taskHandle_ = nullptr;
   portMUX_TYPE xzMux_ = portMUX_INITIALIZER_UNLOCKED;
+  WiFiClientSecure aiTlsClient_;
 
   XiaozhiSnapshot snap_{};
   DisplayFrame latestFrame_{};
@@ -1257,20 +1259,22 @@ class XiaozhiService {
              "AIzaSyBOti4mM-6x9WDnZIjIeyEU21OpBXqWBgw");
     int httpCode = -1;
     String respBody;
+    const uint32_t t0 = millis();
     if (http.begin(client, url)) {
       char ctype[40];
       snprintf(ctype, sizeof(ctype), "audio/l16; rate=%lu", static_cast<unsigned long>(sampleRate));
       http.addHeader("Content-Type", ctype);
-      http.setTimeout(9000);
+      http.setTimeout(5000);
       httpCode = http.POST(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(pcm)), sampleCount * 2U);
       if (httpCode == HTTP_CODE_OK) {
         respBody = http.getString();
       }
       http.end();
     }
+    const uint32_t sttMs = millis() - t0;
 
     if (httpCode != HTTP_CODE_OK || respBody.length() == 0) {
-      Serial.printf("[STT] http=%d hasPrefix=0 text=''\n", httpCode);
+      Serial.printf("[STT] http=%d ms=%lu hasPrefix=0 text=''\n", httpCode, static_cast<unsigned long>(sttMs));
       return false;
     }
 
@@ -1366,7 +1370,7 @@ class XiaozhiService {
     String replyText;
     bool gotReply = false;
 
-    // Engine 1: Custom OpenAI-Compatible Provider (Oktacloud, Groq, OpenRouter, dll.)
+    // Engine 1: Custom OpenAI-Compatible Provider (Groq, Oktacloud, OpenRouter, dll.)
     if (baseCopy[0] != '\0') {
       String endpoint(baseCopy);
       endpoint.trim();
@@ -1377,20 +1381,20 @@ class XiaozhiService {
         endpoint += "/chat/completions";
       }
 
-      WiFiClientSecure client;
-      client.setInsecure();
+      const uint32_t t0 = millis();
       HTTPClient http;
-      if (http.begin(client, endpoint)) {
+      http.setReuse(true);
+      if (http.begin(aiTlsClient_, endpoint)) {
         http.addHeader("Content-Type", "application/json");
         http.addHeader("User-Agent", "JWS-ESP32-UpinAI/2.0");
         if (keyCopy[0] != '\0') {
           http.addHeader("Authorization", String("Bearer ") + keyCopy);
         }
-        http.setTimeout(12000);
+        http.setTimeout(6500);
 
         DynamicJsonDocument reqDoc(1024);
         reqDoc["model"] = (modelCopy[0] != '\0') ? modelCopy : "default";
-        reqDoc["max_tokens"] = 80;
+        reqDoc["max_tokens"] = 65;
         reqDoc["temperature"] = 0.6;
         JsonArray msgs = reqDoc.createNestedArray("messages");
         JsonObject sysMsg = msgs.createNestedObject();
@@ -1417,8 +1421,9 @@ class XiaozhiService {
             }
           }
         }
-        Serial.printf("[AI-CUSTOM] http=%d model='%s' reply='%s'\n",
-                      code, modelCopy[0] ? modelCopy : "default", replyText.c_str());
+        Serial.printf("[AI-CUSTOM] http=%d model='%s' ms=%lu reply='%s'\n",
+                      code, modelCopy[0] ? modelCopy : "default",
+                      static_cast<unsigned long>(millis() - t0), replyText.c_str());
         http.end();
       }
     }
@@ -1426,7 +1431,7 @@ class XiaozhiService {
     // Engine 2: Gemini API (bila Custom Base URL kosong & API Key berawalan AIza atau AQ.)
     if (!gotReply && !skipGemini && keyCopy[0] != '\0' &&
         (strncmp(keyCopy, "AIza", 4) == 0 || strncmp(keyCopy, "AQ.", 3) == 0)) {
-      DynamicJsonDocument reqDoc(1024);
+      DynamicJsonDocument reqDoc(1280);
       JsonArray contents = reqDoc.createNestedArray("contents");
       JsonObject msg = contents.createNestedObject();
       JsonArray parts = msg.createNestedArray("parts");
@@ -1434,21 +1439,27 @@ class XiaozhiService {
       part["text"] = String(sysCtx) +
                      " Jawab ramah dlm Bahasa Indonesia max 90 huruf tanpa markdown.\nPertanyaan: " +
                      String(prompt);
+      JsonObject genCfg = reqDoc.createNestedObject("generationConfig");
+      genCfg["maxOutputTokens"] = 70;
+      genCfg["temperature"] = 0.6;
+      JsonObject thinkCfg = genCfg.createNestedObject("thinkingConfig");
+      thinkCfg["thinkingBudget"] = 0;
+
       String reqBody;
       serializeJson(reqDoc, reqBody);
 
-      WiFiClientSecure client;
-      client.setInsecure();
+      const uint32_t t0 = millis();
       HTTPClient http;
+      http.setReuse(true);
       char url[240];
-      const char* gemModel = (modelCopy[0] != '\0') ? modelCopy : "gemini-3.1-flash-lite-preview";
+      const char* gemModel = (modelCopy[0] != '\0') ? modelCopy : "gemini-2.5-flash-lite";
       snprintf(url, sizeof(url),
                "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent",
                gemModel);
-      if (http.begin(client, url)) {
+      if (http.begin(aiTlsClient_, url)) {
         http.addHeader("Content-Type", "application/json");
         http.addHeader("x-goog-api-key", keyCopy);
-        http.setTimeout(8000);
+        http.setTimeout(6500);
         int code = http.POST(reqBody);
         if (code == HTTP_CODE_OK) {
           StaticJsonDocument<128> filter;
@@ -1463,24 +1474,26 @@ class XiaozhiService {
             }
           }
         }
-        Serial.printf("[AI-GEMINI] http=%d model='%s' reply='%s'\n", code, gemModel, replyText.c_str());
+        Serial.printf("[AI-GEMINI] http=%d model='%s' ms=%lu reply='%s'\n",
+                      code, gemModel, static_cast<unsigned long>(millis() - t0), replyText.c_str());
         http.end();
       }
     }
 
     // Engine 3: Fallback Free Internet AI (Keyless api.llm7.io)
     if (!gotReply) {
+      const uint32_t t0 = millis();
       WiFiClientSecure client;
       client.setInsecure();
       HTTPClient http;
       if (http.begin(client, "https://api.llm7.io/v1/chat/completions")) {
         http.addHeader("Content-Type", "application/json");
         http.addHeader("User-Agent", "JWS-ESP32-UpinAI/2.0");
-        http.setTimeout(4500);
+        http.setTimeout(3500);
 
         DynamicJsonDocument reqDoc(1024);
         reqDoc["model"] = "default";
-        reqDoc["max_tokens"] = 80;
+        reqDoc["max_tokens"] = 65;
         JsonArray msgs = reqDoc.createNestedArray("messages");
         JsonObject sysMsg = msgs.createNestedObject();
         sysMsg["role"] = "system";
@@ -1506,7 +1519,8 @@ class XiaozhiService {
             }
           }
         }
-        Serial.printf("[AI-LLM7] http=%d reply='%s'\n", code, replyText.c_str());
+        Serial.printf("[AI-LLM7] http=%d ms=%lu reply='%s'\n",
+                      code, static_cast<unsigned long>(millis() - t0), replyText.c_str());
         http.end();
       }
     }
@@ -1693,7 +1707,7 @@ class XiaozhiService {
 #ifdef JWS_DESKTOP_S3
     int32_t rawBuf[256];
     const size_t frameStep = (outRate == 8000) ? 2 : 1;
-    while (collected < maxSamples && static_cast<uint32_t>(millis() - recStartMs) < 3400UL) {
+    while (collected < maxSamples && static_cast<uint32_t>(millis() - recStartMs) < 3000UL) {
       size_t bytesRead = 0;
       if (i2s_read(MicI2sPort, rawBuf, sizeof(rawBuf), &bytesRead, pdMS_TO_TICKS(40)) == ESP_OK &&
           bytesRead >= 16) {
@@ -1742,8 +1756,8 @@ class XiaozhiService {
             }
             portEXIT_CRITICAL(&xzMux_);
           }
-          if (speechPeakSeen && collected >= outRate &&
-              static_cast<uint32_t>(millis() - lastSpeechChunkMs) >= 500UL) {
+          if (speechPeakSeen && collected >= (outRate * 85UL) / 100UL &&
+              static_cast<uint32_t>(millis() - lastSpeechChunkMs) >= 350UL) {
             break;
           }
         }
@@ -1987,7 +2001,7 @@ class XiaozhiService {
           (st == XiaozhiState::Speaking && static_cast<uint32_t>(nowMs - stateChangedMs_) > 6000UL)) {
         if (isHumanVoice) {
           if (voiceFrameCount_ < 250) ++voiceFrameCount_;
-          if (voiceFrameCount_ >= 4) {
+          if (voiceFrameCount_ >= 3) {
             voicePending_ = false;
             voiceFrameCount_ = 0;
             manualVoiceTrigger_.store(false, std::memory_order_release);

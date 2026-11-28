@@ -333,27 +333,105 @@ void AudioService::renderTts(const char* rawText) {
   WiFiClient client;
   HTTPClient http;
   size_t totalBytes = 0;
+  size_t filled = 0;
+  uint32_t currentRate = 0;
+  const uint32_t ttsStartMs = millis();
+  uint32_t firstAudioMs = 0;
+  const float gain = (static_cast<float>(volume_.load(std::memory_order_acquire)) / 30.0f) * 1.45f;
+
   http.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
-  http.setTimeout(6000);
+  http.setTimeout(4500);
   if (http.begin(client, url)) {
     const int code = http.GET();
     if (code == HTTP_CODE_OK) {
       WiFiClient* stream = http.getStreamPtr();
-      uint32_t startWait = millis();
-      while ((http.connected() || stream->available()) &&
-             totalBytes < mp3BufCap_ &&
-             (millis() - startWait) < 6500UL &&
-             !stopReq_.load(std::memory_order_acquire)) {
-        const size_t avail = stream->available();
-        if (avail > 0) {
-          const size_t toRead = ((totalBytes + avail) <= mp3BufCap_) ? avail : (mp3BufCap_ - totalBytes);
-          const int r = stream->readBytes(mp3Buf_ + totalBytes, toRead);
+      mp3dec_init(&gMp3Dec);
+      uint32_t lastRxMs = millis();
+
+      while (!stopReq_.load(std::memory_order_acquire)) {
+        const size_t avail = stream ? static_cast<size_t>(stream->available()) : 0U;
+        const bool streamAlive = (stream != nullptr) &&
+                                 (http.connected() || avail > 0U) &&
+                                 ((millis() - lastRxMs) < 4500UL);
+
+        if (avail > 0U && filled < mp3BufCap_) {
+          const size_t space = mp3BufCap_ - filled;
+          const size_t toRead = (avail <= space) ? avail : space;
+          const int r = stream->readBytes(mp3Buf_ + filled, toRead);
           if (r > 0) {
+            filled += static_cast<size_t>(r);
             totalBytes += static_cast<size_t>(r);
-            startWait = millis();
+            lastRxMs = millis();
           }
-        } else {
-          vTaskDelay(pdMS_TO_TICKS(10));
+        }
+
+        // Start decoding as soon as first ~2KB arrives (or drain trailing bytes after stream ends)
+        while ((filled >= 2048U || (!streamAlive && filled >= 4U)) &&
+               !stopReq_.load(std::memory_order_acquire)) {
+          mp3dec_frame_info_t info = {};
+          const int samples = mp3dec_decode_frame(&gMp3Dec, mp3Buf_,
+                                                  static_cast<int>(filled),
+                                                  gPcmFrame, &info);
+          if (info.frame_bytes <= 0 || static_cast<size_t>(info.frame_bytes) > filled) {
+            break;
+          }
+
+          const size_t consumed = static_cast<size_t>(info.frame_bytes);
+          filled -= consumed;
+          if (filled > 0U) {
+            memmove(mp3Buf_, mp3Buf_ + consumed, filled);
+          }
+
+          if (samples > 0 && info.hz > 0) {
+            if (firstAudioMs == 0U) {
+              firstAudioMs = millis() - ttsStartMs;
+            }
+            if (static_cast<uint32_t>(info.hz) != currentRate) {
+              currentRate = static_cast<uint32_t>(info.hz);
+              i2s_set_clk(SpkI2sPort, currentRate, I2S_BITS_PER_SAMPLE_16BIT, I2S_CHANNEL_MONO);
+            }
+            const int ch = (info.channels == 2) ? 2 : 1;
+            for (int i = 0; i < samples; ++i) {
+              int32_t v = gPcmFrame[i * ch];
+              if (ch == 2) {
+                v = (v + gPcmFrame[i * 2 + 1]) / 2;
+              }
+              v = static_cast<int32_t>(static_cast<float>(v) * gain);
+              if (v > 32700) v = 32700;
+              if (v < -32700) v = -32700;
+              gPcmFrame[i] = static_cast<int16_t>(v);
+            }
+            size_t written = 0;
+            i2s_write(SpkI2sPort, gPcmFrame, static_cast<size_t>(samples) * sizeof(int16_t),
+                      &written, pdMS_TO_TICKS(200));
+          }
+
+          // Top up buffer mid-stream when space frees up so socket never stalls
+          if (stream && stream->available() > 0 && filled < 2048U) {
+            break;
+          }
+        }
+
+        const bool moreAvail = (stream != nullptr) && (stream->available() > 0);
+        const bool stillOpen = (stream != nullptr) &&
+                               (http.connected() || moreAvail) &&
+                               ((millis() - lastRxMs) < 4500UL);
+        if (!stillOpen && filled < 4U) {
+          break;
+        }
+        if (!stillOpen) {
+          // Stream closed and remaining <2KB failed to yield a valid frame
+          mp3dec_frame_info_t tailInfo = {};
+          const int tailSamples = mp3dec_decode_frame(&gMp3Dec, mp3Buf_,
+                                                      static_cast<int>(filled),
+                                                      gPcmFrame, &tailInfo);
+          if (tailInfo.frame_bytes <= 0 || tailSamples <= 0) {
+            break;
+          }
+          continue;
+        }
+        if (!moreAvail) {
+          vTaskDelay(pdMS_TO_TICKS(5));
         }
       }
     } else {
@@ -362,47 +440,10 @@ void AudioService::renderTts(const char* rawText) {
     http.end();
   }
 
-  if (totalBytes < 128 || stopReq_.load(std::memory_order_acquire)) {
-    return;
-  }
-
-  mp3dec_init(&gMp3Dec);
-  uint32_t currentRate = 0;
-  size_t offset = 0;
-  const float gain = (static_cast<float>(volume_.load(std::memory_order_acquire)) / 30.0f) * 1.45f;
-
-  while (offset + 4 < totalBytes && !stopReq_.load(std::memory_order_acquire)) {
-    mp3dec_frame_info_t info = {};
-    const int samples = mp3dec_decode_frame(&gMp3Dec, mp3Buf_ + offset,
-                                            static_cast<int>(totalBytes - offset),
-                                            gPcmFrame, &info);
-    if (info.frame_bytes <= 0) break;
-    offset += static_cast<size_t>(info.frame_bytes);
-
-    if (samples > 0 && info.hz > 0) {
-      if (static_cast<uint32_t>(info.hz) != currentRate) {
-        currentRate = static_cast<uint32_t>(info.hz);
-        i2s_set_clk(SpkI2sPort, currentRate, I2S_BITS_PER_SAMPLE_16BIT, I2S_CHANNEL_MONO);
-      }
-      // Convert to mono if 2 channels & apply digital volume scaling with soft clipping
-      const int ch = (info.channels == 2) ? 2 : 1;
-      for (int i = 0; i < samples; ++i) {
-        int32_t v = gPcmFrame[i * ch];
-        if (ch == 2) {
-          v = (v + gPcmFrame[i * 2 + 1]) / 2;
-        }
-        v = static_cast<int32_t>(static_cast<float>(v) * gain);
-        if (v > 32700) v = 32700;
-        if (v < -32700) v = -32700;
-        gPcmFrame[i] = static_cast<int16_t>(v);
-      }
-      size_t written = 0;
-      i2s_write(SpkI2sPort, gPcmFrame, static_cast<size_t>(samples) * sizeof(int16_t),
-                &written, pdMS_TO_TICKS(200));
-    }
-  }
-  Serial.printf("[AUDIO-TTS] Played %u bytes MP3 (%u Hz) -> '%s'\n",
-                static_cast<unsigned>(totalBytes), static_cast<unsigned>(currentRate), clean);
+  Serial.printf("[AUDIO-TTS] FirstAudio=%lums Total=%uB (%uHz) -> '%s'\n",
+                static_cast<unsigned long>(firstAudioMs),
+                static_cast<unsigned>(totalBytes),
+                static_cast<unsigned>(currentRate), clean);
 #else
   (void)rawText;
 #endif

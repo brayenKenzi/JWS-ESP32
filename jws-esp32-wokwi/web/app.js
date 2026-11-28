@@ -1845,6 +1845,45 @@
       });
     }
 
+    const btnPresetGeminiFast = document.getElementById("btnPresetGeminiFast");
+    const btnPresetGroqFast = document.getElementById("btnPresetGroqFast");
+    const btnPresetFreeAi = document.getElementById("btnPresetFreeAi");
+
+    if (btnPresetGeminiFast) {
+      btnPresetGeminiFast.addEventListener("click", () => {
+        xzAgentDirty = true;
+        if (xzApiBaseInput) xzApiBaseInput.value = "";
+        if (xzApiModelInput) xzApiModelInput.value = "gemini-2.5-flash-lite";
+        if (xzApiKeyInput) {
+          xzApiKeyInput.placeholder = "Tempel Gemini API Key (AIzaSy...) dari aistudio.google.com/apikey";
+          xzApiKeyInput.focus();
+        }
+        showAlert("Preset Gemini 2.5 Flash-Lite siap! Tempel API Key dari aistudio.google.com/apikey lalu klik Simpan.", "success");
+      });
+    }
+
+    if (btnPresetGroqFast) {
+      btnPresetGroqFast.addEventListener("click", () => {
+        xzAgentDirty = true;
+        if (xzApiBaseInput) xzApiBaseInput.value = "https://api.groq.com/openai/v1";
+        if (xzApiModelInput) xzApiModelInput.value = "llama-3.1-8b-instant";
+        if (xzApiKeyInput) {
+          xzApiKeyInput.placeholder = "Tempel Groq API Key (gsk_...) dari console.groq.com";
+          xzApiKeyInput.focus();
+        }
+        showAlert("Preset Groq Llama-3.1-8B (<0.5s) siap! Tempel Groq API Key (gsk_...) lalu klik Simpan.", "success");
+      });
+    }
+
+    if (btnPresetFreeAi) {
+      btnPresetFreeAi.addEventListener("click", () => {
+        xzAgentDirty = true;
+        if (xzApiBaseInput) xzApiBaseInput.value = "";
+        if (xzApiModelInput) xzApiModelInput.value = "";
+        showAlert("Diatur ke AI Internet Gratis (tanpa API Key). Klik Simpan untuk menerapkan.", "success");
+      });
+    }
+
     if (btnSaveXzKey) {
       btnSaveXzKey.addEventListener("click", async () => {
         const agentName = xzAgentNameInput ? xzAgentNameInput.value.trim() : "";

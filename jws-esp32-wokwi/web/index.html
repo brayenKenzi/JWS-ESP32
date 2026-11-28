@@ -432,12 +432,22 @@
             </div>
 
             <div class="form-group">
+              <label>Preset Engine AI Cepat (1 Klik Isi Otomatis)</label>
+              <div class="btn-row" style="flex-wrap:wrap; gap:6px;">
+                <button type="button" id="btnPresetGeminiFast" class="btn btn-ghost">&#9889; Gemini 2.5 Flash-Lite</button>
+                <button type="button" id="btnPresetGroqFast" class="btn btn-ghost">&#128640; Groq Llama-3.1-8B (&lt;0.5s)</button>
+                <button type="button" id="btnPresetFreeAi" class="btn btn-ghost">&#127379; AI Gratis</button>
+              </div>
+              <span class="field-hint">Pilih preset lalu tempel API Key dari <strong>aistudio.google.com/apikey</strong> (Gemini) atau <strong>console.groq.com</strong> (Groq), lalu klik Simpan.</span>
+            </div>
+
+            <div class="form-group">
               <label for="xzApiBaseInput">Base URL OpenAI-Compatible (Oktacloud / Groq / OpenRouter)</label>
               <input
                 type="text"
                 id="xzApiBaseInput"
                 maxlength="120"
-                placeholder="https://api.oktacloud.id/v1 (Kosongkan untuk Gemini / AI Gratis)"
+                placeholder="https://api.groq.com/openai/v1 (Kosongkan untuk Gemini / AI Gratis)"
               >
             </div>
 
@@ -447,7 +457,7 @@
                 type="text"
                 id="xzApiModelInput"
                 maxlength="60"
-                placeholder="Contoh: gpt-4o-mini / gemini-2.0-flash / llama-3.3-70b"
+                placeholder="Contoh: gemini-2.5-flash-lite / llama-3.1-8b-instant / gpt-4o-mini"
               >
             </div>
 
