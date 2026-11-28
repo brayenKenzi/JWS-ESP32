@@ -145,6 +145,9 @@ bool AudioService::isEnabled() const {
 
 void AudioService::playChime(AudioChime chime) {
   if (!enabled_.load(std::memory_order_acquire) || volume_.load(std::memory_order_acquire) == 0) return;
+  uint32_t guardUntil = millis() + 1200UL;
+  if (guardUntil == 0U) guardUntil = 1U;
+  echoGuardUntilMs_.store(guardUntil, std::memory_order_release);
   pendingChime_.store(static_cast<uint8_t>(chime), std::memory_order_release);
 }
 
@@ -157,6 +160,9 @@ void AudioService::speakText(const char* text) {
   copyStrSafe(lastSpoken_, sizeof(lastSpoken_), text);
   portEXIT_CRITICAL(&mux_);
 
+  uint32_t guardUntil = millis() + 2500UL;
+  if (guardUntil == 0U) guardUntil = 1U;
+  echoGuardUntilMs_.store(guardUntil, std::memory_order_release);
   stopReq_.store(true, std::memory_order_release);
   pendingTts_.store(true, std::memory_order_release);
 }
@@ -165,6 +171,16 @@ void AudioService::stop() {
   stopReq_.store(true, std::memory_order_release);
   pendingChime_.store(0, std::memory_order_release);
   pendingTts_.store(false, std::memory_order_release);
+}
+
+bool AudioService::isMicSuppressed() const {
+  if (playing_.load(std::memory_order_acquire) ||
+      pendingTts_.load(std::memory_order_acquire) ||
+      pendingChime_.load(std::memory_order_acquire) != 0) {
+    return true;
+  }
+  const uint32_t guardUntil = echoGuardUntilMs_.load(std::memory_order_acquire);
+  return (guardUntil != 0U) && (static_cast<int32_t>(millis() - guardUntil) < 0);
 }
 
 AudioStatus AudioService::status() {
@@ -193,6 +209,9 @@ void AudioService::taskLoop() {
 #ifdef JWS_DESKTOP_S3
       i2s_zero_dma_buffer(SpkI2sPort);
 #endif
+      uint32_t guardUntil = millis() + 900UL;
+      if (guardUntil == 0U) guardUntil = 1U;
+      echoGuardUntilMs_.store(guardUntil, std::memory_order_release);
       playing_.store(false, std::memory_order_release);
     }
 
@@ -208,6 +227,9 @@ void AudioService::taskLoop() {
 #ifdef JWS_DESKTOP_S3
       i2s_zero_dma_buffer(SpkI2sPort);
 #endif
+      uint32_t guardUntil = millis() + 1400UL;
+      if (guardUntil == 0U) guardUntil = 1U;
+      echoGuardUntilMs_.store(guardUntil, std::memory_order_release);
       playing_.store(false, std::memory_order_release);
     }
 

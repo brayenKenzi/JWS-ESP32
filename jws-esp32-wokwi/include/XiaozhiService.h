@@ -386,6 +386,7 @@ class XiaozhiService {
   size_t preRollFilled_ = 0;
   std::atomic<bool> manualVoiceTrigger_{false};
   uint32_t conversationOpenUntilMs_ = 0;
+  bool wasMicSuppressed_ = false;
 
   static void copySafe(char* dst, size_t cap, const char* src) {
     if (!dst || cap == 0) return;
@@ -1811,6 +1812,18 @@ class XiaozhiService {
     const bool sttOk = transcribePcmGoogleStt(pcmOut, collected, outRate, sttText, hasPrefix, strippedQ);
 
     if (sttOk && sttText.length() > 0) {
+      if (!isManual && !hasPrefix) {
+        AudioStatus as = AudioService::instance().status();
+        if (isLikelySelfEcho(sttText, as.lastSpoken)) {
+          Serial.printf("[XIAOZHI] Self-echo ignored: '%s'\n", sttText.c_str());
+          portENTER_CRITICAL(&xzMux_);
+          snap_.state = XiaozhiState::Idle;
+          stateChangedMs_ = millis();
+          portEXIT_CRITICAL(&xzMux_);
+          return;
+        }
+      }
+
       portENTER_CRITICAL(&xzMux_);
       copySafe(snap_.userQuery, sizeof(snap_.userQuery), sttText.c_str());
       portEXIT_CRITICAL(&xzMux_);
@@ -1854,6 +1867,40 @@ class XiaozhiService {
     portEXIT_CRITICAL(&xzMux_);
   }
 
+  static bool isLikelySelfEcho(const String& sttText, const char* lastSpoken) {
+    if (!lastSpoken || lastSpoken[0] == '\0' || sttText.length() == 0) return false;
+    String sttLow = sttText;
+    sttLow.toLowerCase();
+    sttLow.trim();
+    String spkLow(lastSpoken);
+    spkLow.toLowerCase();
+    spkLow.trim();
+    if (sttLow.length() >= 4 && spkLow.indexOf(sttLow) >= 0) {
+      return true;
+    }
+    int longWords = 0;
+    int matchedWords = 0;
+    String tok;
+    const size_t n = sttLow.length();
+    for (size_t i = 0; i <= n; ++i) {
+      const char ch = (i < n) ? sttLow.charAt(static_cast<unsigned int>(i)) : ' ';
+      const bool isAlnum = (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9');
+      if (isAlnum) {
+        tok += ch;
+      } else if (tok.length() > 0) {
+        if (tok.length() >= 4) {
+          ++longWords;
+          if (spkLow.indexOf(tok) >= 0) {
+            ++matchedWords;
+          }
+        }
+        tok = "";
+      }
+    }
+    if (longWords == 0) return false;
+    return (matchedWords >= 2) || (matchedWords * 2 >= longWords);
+  }
+
   static void taskEntry(void* arg) {
     static_cast<XiaozhiService*>(arg)->backgroundLoop();
   }
@@ -1871,12 +1918,24 @@ class XiaozhiService {
     int32_t s2Hex = 0;
     int32_t s3Hex = 0;
 
+    const bool spkPlaying = AudioService::instance().isMicSuppressed();
 #ifdef JWS_DESKTOP_S3
     XiaozhiState curStateBeforeRead = XiaozhiState::Idle;
     portENTER_CRITICAL(&xzMux_);
     curStateBeforeRead = snap_.state;
     portEXIT_CRITICAL(&xzMux_);
-    const bool spkPlaying = AudioService::instance().status().playing;
+    if (spkPlaying) {
+      preRollFilled_ = 0;
+      preRollWriteIdx_ = 0;
+      wasMicSuppressed_ = true;
+    } else if (wasMicSuppressed_) {
+      wasMicSuppressed_ = false;
+      if (micReady_) {
+        i2s_zero_dma_buffer(MicI2sPort);
+      }
+      preRollFilled_ = 0;
+      preRollWriteIdx_ = 0;
+    }
     const bool fillPreRoll = (preRollBuf_ != nullptr) && !spkPlaying &&
                              (curStateBeforeRead == XiaozhiState::Idle || curStateBeforeRead == XiaozhiState::Speaking);
 
@@ -1953,7 +2012,7 @@ class XiaozhiService {
     uint8_t sliceEnergy[12] = {0};
     portENTER_CRITICAL(&xzMux_);
     XiaozhiState st = snap_.state;
-    if (gotAudio) {
+    if (gotAudio && !spkPlaying) {
       if (rawAvg > 50) {
         if (noiseFloor_ < 0.0f) {
           float initFl = static_cast<float>(rawAvg);
@@ -1986,7 +2045,7 @@ class XiaozhiService {
       }
     }
     const bool warmupDone = (static_cast<int32_t>(nowMs - bootWarmupUntilMs_) >= 0);
-    if (!warmupDone) {
+    if (!warmupDone || spkPlaying) {
       curLevel = 0;
       for (int b = 0; b < 12; ++b) sliceEnergy[b] = 0;
       voicePending_ = false;
@@ -2106,7 +2165,10 @@ class XiaozhiService {
 
       // Handle pending voice recording request (Web Dashboard or VAD)
       if (pendingVoiceRecord_.exchange(false, std::memory_order_acq_rel)) {
-        recordAndAskGeminiAudio();
+        const bool isMan = manualVoiceTrigger_.load(std::memory_order_acquire);
+        if (isMan || !AudioService::instance().isMicSuppressed()) {
+          recordAndAskGeminiAudio();
+        }
         vTaskDelay(pdMS_TO_TICKS(35));
         continue;
       }
@@ -2121,6 +2183,7 @@ class XiaozhiService {
       }
 
       // Check state transitions (Thinking -> Speaking -> Idle)
+      const bool audioBusy = AudioService::instance().isMicSuppressed();
       bool triggerIntentFromVad = false;
       uint8_t pickedIntent = 0;
       portENTER_CRITICAL(&xzMux_);
@@ -2131,10 +2194,13 @@ class XiaozhiService {
         triggerIntentFromVad = true;
         pickedIntent = nextIntent_;
         nextIntent_ = (nextIntent_ + 1) % 5;
-      } else if (snap_.state == XiaozhiState::Speaking &&
-                 static_cast<uint32_t>(nowMs - stateChangedMs_) >= 8000UL) {
-        snap_.state = XiaozhiState::Idle;
-        stateChangedMs_ = nowMs;
+      } else if (snap_.state == XiaozhiState::Speaking) {
+        if (audioBusy) {
+          stateChangedMs_ = nowMs;
+        } else if (static_cast<uint32_t>(nowMs - stateChangedMs_) >= 3500UL) {
+          snap_.state = XiaozhiState::Idle;
+          stateChangedMs_ = nowMs;
+        }
       }
       portEXIT_CRITICAL(&xzMux_);
 

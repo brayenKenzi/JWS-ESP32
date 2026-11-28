@@ -39,6 +39,7 @@ class AudioService {
   void playChime(AudioChime chime);
   void speakText(const char* text);
   void stop();
+  bool isMicSuppressed() const;
   AudioStatus status();
 
  private:
@@ -63,6 +64,7 @@ class AudioService {
   std::atomic<uint8_t> volume_{24};
   std::atomic<uint8_t> pendingChime_{0};
   std::atomic<bool> pendingTts_{false};
+  std::atomic<uint32_t> echoGuardUntilMs_{0};
   char ttsQueue_[220] = "";
   char lastSpoken_[96] = "Speaker MAX98357A Siap (GPIO 40, 41, 42)";
 };
